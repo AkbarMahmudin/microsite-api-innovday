@@ -1,0 +1,16 @@
+services:
+  db:
+    container_name: db
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: microsite
+    ports:
+      - 5432:5432
+    networks:
+      - microsite-api-network
+
+networks:
+  microsite-api-network:
