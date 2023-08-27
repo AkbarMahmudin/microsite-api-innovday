@@ -30,6 +30,10 @@ export class CreatePostDto {
   @IsOptional()
   status?: PostStatus;
 
+  @IsString({ each: true })
+  @IsOptional()
+  tags?: string[];
+
   @IsString()
   @IsOptional()
   publishedAt?: Date;

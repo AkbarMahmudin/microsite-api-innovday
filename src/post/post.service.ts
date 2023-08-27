@@ -18,6 +18,8 @@ export class PostService {
         payload.publishedAt,
       );
 
+      payload.tags && this.validationTags(payload.tags);
+
       const postCreated = await this.prisma.post.create({
         data: {
           ...payload,
@@ -36,7 +38,7 @@ export class PostService {
   }
 
   async getAll(query: any = {}) {
-    const { title, status, published, page = 1, limit = 10 } = query;
+    const { title, status, published, tags, page = 1, limit = 10 } = query;
     const offset = (page - 1) * limit;
     const options: any = {
       take: Number(limit),
@@ -69,6 +71,15 @@ export class PostService {
         publishedAt: {
           not: null,
           lte: new Date(),
+        },
+      };
+    }
+
+    if (tags) {
+      options.where = {
+        ...options.where,
+        tags: {
+          hasSome: typeof tags === 'string' ? [tags] : tags,
         },
       };
     }
@@ -152,6 +163,12 @@ export class PostService {
         );
       }
 
+      if (payload.tags) {
+        this.validationTags(payload.tags);
+        const { tags } = await this.getOneById(id);
+        tags && (payload.tags = [...new Set([...tags, ...payload.tags])]);
+      }
+
       const postUpdated = await this.prisma.post.update({
         where: {
           id,
@@ -204,6 +221,12 @@ export class PostService {
     }
 
     return publishedAt;
+  }
+
+  private validationTags(tags: string[]) {
+    if (tags.filter((tag) => !tag).length > 0) {
+      throw new BadRequestException('Tags cannot be empty');
+    }
   }
 
   private response(data: any, message: string, meta?: any) {

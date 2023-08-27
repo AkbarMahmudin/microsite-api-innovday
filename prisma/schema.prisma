@@ -17,6 +17,7 @@ model Post {
   slug        String    @unique
   content     String?
   status      String    @default("draft")
+  tags        String[]  @default([])
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

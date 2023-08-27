@@ -16,7 +16,6 @@ import { PostService } from './post.service';
 import { CreatePostDto, UpdatePostDto } from './dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { of } from 'rxjs';
 import { join } from 'path';
 
 const storage = diskStorage({
