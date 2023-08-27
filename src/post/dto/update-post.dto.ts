@@ -4,6 +4,10 @@ import { PostStatus } from './post-status';
 export class UpdatePostDto {
   @IsString()
   @IsOptional()
+  thumbnail?: string;
+
+  @IsString()
+  @IsOptional()
   title?: string;
 
   @IsString()

@@ -3,6 +3,10 @@ import { PostStatus } from './post-status';
 
 export class CreatePostDto {
   @IsString()
+  @IsOptional()
+  thumbnail?: string;
+
+  @IsString()
   @IsNotEmpty()
   title: string;
 

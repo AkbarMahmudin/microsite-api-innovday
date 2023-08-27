@@ -12,6 +12,7 @@ datasource db {
 
 model Post {
   id          Int       @id @default(autoincrement())
+  thumbnail   String?
   title       String
   slug        String    @unique
   content     String?
@@ -19,4 +20,6 @@ model Post {
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@map("posts")
 }
