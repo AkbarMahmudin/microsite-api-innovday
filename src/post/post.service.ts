@@ -75,12 +75,12 @@ export class PostService {
 
     const posts = await this.prisma.post.findMany(options);
     const count = await this.prisma.post.count();
-    const totalPage = Math.ceil(count / limit);
+    const totalPages = Math.ceil(count / limit);
     const meta = {
       page: Number(page),
       limit: Number(limit),
       total_data: posts.length,
-      total_page: totalPage,
+      total_page: totalPages,
     };
 
     return this.response({ posts }, 'Posts retrieved successfully', meta);
@@ -96,6 +96,14 @@ export class PostService {
 
   private async getOneBySlug(slug: string) {
     const post = await this.prisma.post.findUnique({
+      include: {
+        category: {
+          select: {
+            name: true,
+            slug: true,
+          },
+        },
+      },
       where: {
         slug,
       },
@@ -110,6 +118,14 @@ export class PostService {
 
   private async getOneById(id: number) {
     const post = await this.prisma.post.findUnique({
+      include: {
+        category: {
+          select: {
+            name: true,
+            slug: true,
+          },
+        },
+      },
       where: {
         id: Number(id),
       },
@@ -148,8 +164,6 @@ export class PostService {
 
       return this.response({ post: postUpdated }, 'Post updated successfully');
     } catch (err) {
-      console.log(err);
-
       if (err.code) {
         this.prisma.prismaError(err);
       }
@@ -159,13 +173,13 @@ export class PostService {
 
   async delete(id: number) {
     try {
-      const postDeleted = await this.prisma.post.delete({
+      await this.prisma.post.delete({
         where: {
           id,
         },
       });
 
-      return this.response({ post: postDeleted }, 'Post deleted successfully');
+      return this.response({ post_id: id }, 'Post deleted successfully');
     } catch (err) {
       if (err.code) {
         this.prisma.prismaError(err);

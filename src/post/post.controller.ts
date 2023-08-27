@@ -46,7 +46,7 @@ export class PostController {
   ) {
     return await this.postService.create({
       ...payload,
-      thumbnail: thumbnail.filename,
+      ...(payload.thumbnail && { thumbnail: thumbnail.filename }),
     });
   }
 

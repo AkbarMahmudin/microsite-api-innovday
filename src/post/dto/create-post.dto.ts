@@ -1,4 +1,10 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { PostStatus } from './post-status';
 
 export class CreatePostDto {
@@ -27,4 +33,8 @@ export class CreatePostDto {
   @IsString()
   @IsOptional()
   publishedAt?: Date;
+
+  @IsNumber()
+  @IsNotEmpty()
+  categoryId: number;
 }

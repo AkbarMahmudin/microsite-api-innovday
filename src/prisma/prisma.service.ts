@@ -23,6 +23,9 @@ export class PrismaService extends PrismaClient {
       P2002: () => {
         throw new BadRequestException(err.meta.target[0] + ' is already taken');
       },
+      P2003: () => {
+        throw new BadRequestException(err.meta['field_name'] + ' not found');
+      },
       P2025: () => {
         throw new NotFoundException(err.meta.cause);
       },

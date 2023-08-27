@@ -21,5 +21,20 @@ model Post {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId  Int?
+
   @@map("posts")
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts     Post[]
+
+  @@map("categories")
 }

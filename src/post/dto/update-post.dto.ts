@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 import { PostStatus } from './post-status';
 
 export class UpdatePostDto {
@@ -27,4 +27,8 @@ export class UpdatePostDto {
   @IsString()
   @IsOptional()
   publishedAt?: Date;
+
+  @IsNumber()
+  @IsOptional()
+  categoryId?: number;
 }
