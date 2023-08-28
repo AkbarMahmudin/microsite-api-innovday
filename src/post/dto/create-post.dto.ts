@@ -6,6 +6,7 @@ import {
   IsString,
 } from 'class-validator';
 import { PostStatus } from './post-status';
+import { Type } from 'class-transformer';
 
 export class CreatePostDto {
   @IsString()
@@ -40,5 +41,6 @@ export class CreatePostDto {
 
   @IsNumber()
   @IsNotEmpty()
+  @Type(() => Number)
   categoryId: number;
 }

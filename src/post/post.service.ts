@@ -5,12 +5,16 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePostDto, UpdatePostDto } from './dto';
+import { MediaService } from 'src/media/media.service';
 
 @Injectable()
 export class PostService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mediaService: MediaService,
+  ) {}
 
-  async create(payload: CreatePostDto) {
+  async create(payload: CreatePostDto, thumbnail?: Express.Multer.File) {
     try {
       const slug = payload.title.toLowerCase().replace(/ /g, '-');
       const publishedAt = await this.setPublishedAt(
@@ -18,7 +22,14 @@ export class PostService {
         payload.publishedAt,
       );
 
+      payload.categoryId = Number(payload.categoryId);
       payload.tags && this.validationTags(payload.tags);
+
+      if (thumbnail) {
+        const { name } = (await this.mediaService.uploadFile(thumbnail))
+          .metadata;
+        payload.thumbnail = name;
+      }
 
       const postCreated = await this.prisma.post.create({
         data: {
@@ -27,6 +38,9 @@ export class PostService {
           publishedAt,
         },
       });
+      postCreated.thumbnail = await this.mediaService.getFileDownloadUrl(
+        postCreated.thumbnail,
+      );
 
       return this.response({ post: postCreated }, 'Post created successfully');
     } catch (err) {
@@ -149,13 +163,19 @@ export class PostService {
     return post;
   }
 
-  async update(id: number, payload: UpdatePostDto) {
+  async update(
+    id: number,
+    payload: UpdatePostDto,
+    thumbnail?: Express.Multer.File,
+  ) {
     let slug = '';
     if (payload.title) {
       slug = payload.title.toLowerCase().replace(/ /g, '-');
     }
 
     try {
+      const { tags, thumbnail: thumbnailExist } = await this.getOneById(id);
+
       if (payload.status) {
         payload.publishedAt = await this.setPublishedAt(
           payload.status,
@@ -165,8 +185,14 @@ export class PostService {
 
       if (payload.tags) {
         this.validationTags(payload.tags);
-        const { tags } = await this.getOneById(id);
         tags && (payload.tags = [...new Set([...tags, ...payload.tags])]);
+      }
+
+      if (thumbnail) {
+        const { name } = (await this.mediaService.uploadFile(thumbnail))
+          .metadata;
+        payload.thumbnail = name;
+        thumbnailExist && (await this.mediaService.deleteFile(thumbnailExist));
       }
 
       const postUpdated = await this.prisma.post.update({
@@ -178,6 +204,9 @@ export class PostService {
           ...(slug.length > 0 && { slug }),
         },
       });
+      postUpdated.thumbnail = await this.mediaService.getFileDownloadUrl(
+        postUpdated.thumbnail,
+      );
 
       return this.response({ post: postUpdated }, 'Post updated successfully');
     } catch (err) {
@@ -190,6 +219,9 @@ export class PostService {
 
   async delete(id: number) {
     try {
+      const { thumbnail } = await this.getOneById(id);
+      thumbnail && (await this.mediaService.deleteFile(thumbnail));
+
       await this.prisma.post.delete({
         where: {
           id,
@@ -221,6 +253,11 @@ export class PostService {
     }
 
     return publishedAt;
+  }
+
+  async getPostThumbnail(thumbnail: string) {
+    const stream = await this.mediaService.getFileStream(thumbnail);
+    return stream;
   }
 
   private validationTags(tags: string[]) {

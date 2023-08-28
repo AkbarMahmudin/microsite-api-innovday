@@ -19,7 +19,6 @@ import { diskStorage } from 'multer';
 import { join } from 'path';
 
 const storage = diskStorage({
-  destination: './uploads',
   filename: (req, file, cb) => {
     const randomName = Array(32)
       .fill(null)
@@ -34,19 +33,18 @@ export class PostController {
   constructor(private postService: PostService) {}
 
   @Post()
-  @UseInterceptors(
-    FileInterceptor('thumbnail', {
-      storage,
-    }),
-  )
+  @UseInterceptors(FileInterceptor('thumbnail'))
   async create(
     @Body() payload: CreatePostDto,
     @UploadedFile() thumbnail: Express.Multer.File,
   ) {
-    return await this.postService.create({
-      ...payload,
-      ...(payload.thumbnail && { thumbnail: thumbnail.filename }),
-    });
+    return await this.postService.create(
+      {
+        ...payload,
+        // ...(payload.thumbnail && { thumbnail: thumbnail.filename }),
+      },
+      thumbnail,
+    );
   }
 
   @Get()
@@ -60,11 +58,13 @@ export class PostController {
   }
 
   @Patch(':id')
+  @UseInterceptors(FileInterceptor('thumbnail'))
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() payload: UpdatePostDto,
+    @UploadedFile() thumbnail: Express.Multer.File,
   ) {
-    return await this.postService.update(id, payload);
+    return await this.postService.update(id, payload, thumbnail);
   }
 
   @Delete(':id')
@@ -73,7 +73,8 @@ export class PostController {
   }
 
   @Get('thumbnail/:thumbnail')
-  async serveThumbnail(@Param('thumbnail') thumbnail: string, @Res() res) {
-    return res.sendFile(join(process.cwd(), 'uploads', thumbnail));
+  async serveThumbnail(@Param('thumbnail') thumbnail: string) {
+    // return res.sendFile(join(process.cwd(), 'uploads', thumbnail));
+    return await this.postService.getPostThumbnail(thumbnail);
   }
 }

@@ -1,5 +1,6 @@
 import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 import { PostStatus } from './post-status';
+import { Type } from 'class-transformer';
 
 export class UpdatePostDto {
   @IsString()
@@ -34,5 +35,6 @@ export class UpdatePostDto {
 
   @IsNumber()
   @IsOptional()
+  @Type(() => Number)
   categoryId?: number;
 }
