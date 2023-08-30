@@ -9,6 +9,8 @@ import { MediaService } from 'src/media/media.service';
 
 @Injectable()
 export class PostService {
+  private queryOptions = {};
+
   constructor(
     private prisma: PrismaService,
     private mediaService: MediaService,
@@ -68,72 +70,29 @@ export class PostService {
       limit = 10,
     } = query;
     const offset = (page - 1) * limit;
-    const options: any = {
+
+    this.searchByTitle(title)
+      .searchByStatus(status, keyPost)
+      .searchByPublished(published)
+      .searchByTags(tags);
+
+    const posts = await this.prisma.post.findMany({
       take: Number(limit),
       skip: Number(offset),
       orderBy: {
         publishedAt: 'desc',
       },
-    };
-
-    if (title) {
-      options.where = {
-        ...options.where,
-        title: {
-          contains: title,
-          mode: 'insensitive',
-        },
-      };
-    }
-
-    if (status) {
-      if (status === 'private') {
-        if (!keyPost) {
-          throw new BadRequestException('Key post is required');
-        }
-        options.where = {
-          ...options.where,
-          status: {
-            in: ['private'],
-          },
-          keyPost,
-        };
-      } else {
-        options.where = {
-          ...options.where,
-          status: {
-            in: typeof status === 'string' ? [status] : status,
-          },
-        };
-      }
-    }
-
-    if (published) {
-      options.where = {
-        ...options.where,
-        publishedAt: {
-          not: null,
-          lte: new Date(),
-        },
-      };
-    }
-
-    if (tags) {
-      options.where = {
-        ...options.where,
-        tags: {
-          hasSome: typeof tags === 'string' ? [tags] : tags,
-        },
-      };
-    }
-
-    const posts = await this.prisma.post.findMany(options);
+      where: {
+        ...this.queryOptions,
+      },
+    });
     const count = await this.prisma.post.count();
     const totalPages = Math.ceil(count / limit);
     const meta = {
       page: Number(page),
       limit: Number(limit),
-      total_data: posts.length,
+      total_data_per_page: posts.length,
+      total_data: count,
       total_page: totalPages,
     };
 
@@ -267,6 +226,69 @@ export class PostService {
   }
 
   // ---------------------------- Other CRUD ----------------------------
+
+  private searchByTitle(title: string) {
+    if (!title) return this;
+
+    this.queryOptions = {
+      ...this.queryOptions,
+      title: {
+        contains: title,
+        mode: 'insensitive',
+      },
+    };
+    return this;
+  }
+
+  private searchByStatus(status: string, keyPost?: string) {
+    if (!status) return this;
+
+    if (status === 'private') {
+      if (!keyPost) {
+        throw new BadRequestException('Key post is required');
+      }
+      this.queryOptions = {
+        ...this.queryOptions,
+        status: {
+          in: ['private'],
+        },
+        keyPost,
+      };
+    } else {
+      this.queryOptions = {
+        ...this.queryOptions,
+        status: {
+          in: typeof status === 'string' ? [status] : status,
+        },
+      };
+    }
+    return this;
+  }
+
+  private searchByPublished(published: boolean) {
+    if (!published) return this;
+
+    this.queryOptions = {
+      ...this.queryOptions,
+      publishedAt: {
+        not: null,
+        lte: new Date(),
+      },
+    };
+    return this;
+  }
+
+  private searchByTags(tags: string[]) {
+    if (!tags) return this;
+
+    this.queryOptions = {
+      ...this.queryOptions,
+      tags: {
+        hasSome: typeof tags === 'string' ? [tags] : tags,
+      },
+    };
+    return this;
+  }
 
   private generateKeyForPrivatePost() {
     return Math.random().toString(36).slice(-8);
