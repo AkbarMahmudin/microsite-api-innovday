@@ -7,6 +7,10 @@ export class MediaService {
   constructor(private storageService: StorageService) {}
 
   async getFileDownloadUrl(filename: string) {
+    if (!filename) {
+      return null;
+    }
+
     const url = await this.storageService.getDownloadURL(filename);
     return url;
   }

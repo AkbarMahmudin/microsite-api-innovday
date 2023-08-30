@@ -25,6 +25,8 @@ model Post {
   category    Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   categoryId  Int?
 
+  keyPost     String?   @unique
+
   @@map("posts")
 }
 

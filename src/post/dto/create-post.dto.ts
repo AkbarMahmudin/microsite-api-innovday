@@ -43,4 +43,8 @@ export class CreatePostDto {
   @IsNotEmpty()
   @Type(() => Number)
   categoryId: number;
+
+  @IsString()
+  @IsOptional()
+  keyPost?: string;
 }

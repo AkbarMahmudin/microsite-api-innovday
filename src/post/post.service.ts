@@ -14,6 +14,8 @@ export class PostService {
     private mediaService: MediaService,
   ) {}
 
+  // ---------------------------- Main CRUD ----------------------------
+
   async create(payload: CreatePostDto, thumbnail?: Express.Multer.File) {
     try {
       const slug = payload.title.toLowerCase().replace(/ /g, '-');
@@ -29,6 +31,10 @@ export class PostService {
         const { name } = (await this.mediaService.uploadFile(thumbnail))
           .metadata;
         payload.thumbnail = name;
+      }
+
+      if (payload.status === 'private') {
+        payload.keyPost = this.generateKeyForPrivatePost();
       }
 
       const postCreated = await this.prisma.post.create({
@@ -52,7 +58,15 @@ export class PostService {
   }
 
   async getAll(query: any = {}) {
-    const { title, status, published, tags, page = 1, limit = 10 } = query;
+    const {
+      title,
+      status,
+      published,
+      tags,
+      keyPost,
+      page = 1,
+      limit = 10,
+    } = query;
     const offset = (page - 1) * limit;
     const options: any = {
       take: Number(limit),
@@ -64,6 +78,7 @@ export class PostService {
 
     if (title) {
       options.where = {
+        ...options.where,
         title: {
           contains: title,
           mode: 'insensitive',
@@ -72,11 +87,25 @@ export class PostService {
     }
 
     if (status) {
-      options.where = {
-        status: {
-          in: typeof status === 'string' ? [status] : status,
-        },
-      };
+      if (status === 'private') {
+        if (!keyPost) {
+          throw new BadRequestException('Key post is required');
+        }
+        options.where = {
+          ...options.where,
+          status: {
+            in: ['private'],
+          },
+          keyPost,
+        };
+      } else {
+        options.where = {
+          ...options.where,
+          status: {
+            in: typeof status === 'string' ? [status] : status,
+          },
+        };
+      }
     }
 
     if (published) {
@@ -235,6 +264,12 @@ export class PostService {
       }
       throw err;
     }
+  }
+
+  // ---------------------------- Other CRUD ----------------------------
+
+  private generateKeyForPrivatePost() {
+    return Math.random().toString(36).slice(-8);
   }
 
   private setPublishedAt(status: string, publishedAt: Date | null = null) {

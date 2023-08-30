@@ -2,30 +2,31 @@ import {
   Body,
   Controller,
   Delete,
+  FileTypeValidator,
   Get,
+  MaxFileSizeValidator,
   Param,
+  ParseFilePipe,
   ParseIntPipe,
   Patch,
   Post,
   Query,
-  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+
 import { PostService } from './post.service';
 import { CreatePostDto, UpdatePostDto } from './dto';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { join } from 'path';
 
-const storage = diskStorage({
-  filename: (req, file, cb) => {
-    const randomName = Array(32)
-      .fill(null)
-      .map(() => Math.round(Math.random() * 16).toString(16))
-      .join('');
-    return cb(null, `${randomName}${file.originalname}`);
-  },
+const FILE_VALIDATION = new ParseFilePipe({
+  validators: [
+    new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 1 }), // 5MB
+    new FileTypeValidator({
+      fileType: /image\/(jpe?g|png|webp)$/i,
+    }),
+  ],
+  fileIsRequired: false,
 });
 
 @Controller('posts')
@@ -36,12 +37,12 @@ export class PostController {
   @UseInterceptors(FileInterceptor('thumbnail'))
   async create(
     @Body() payload: CreatePostDto,
-    @UploadedFile() thumbnail: Express.Multer.File,
+    @UploadedFile(FILE_VALIDATION)
+    thumbnail: Express.Multer.File,
   ) {
     return await this.postService.create(
       {
         ...payload,
-        // ...(payload.thumbnail && { thumbnail: thumbnail.filename }),
       },
       thumbnail,
     );
@@ -62,7 +63,7 @@ export class PostController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() payload: UpdatePostDto,
-    @UploadedFile() thumbnail: Express.Multer.File,
+    @UploadedFile(FILE_VALIDATION) thumbnail: Express.Multer.File,
   ) {
     return await this.postService.update(id, payload, thumbnail);
   }
@@ -74,7 +75,6 @@ export class PostController {
 
   @Get('thumbnail/:thumbnail')
   async serveThumbnail(@Param('thumbnail') thumbnail: string) {
-    // return res.sendFile(join(process.cwd(), 'uploads', thumbnail));
     return await this.postService.getPostThumbnail(thumbnail);
   }
 }
