@@ -8,6 +8,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { PostModule } from './post/post.module';
 import { CategoryModule } from './category/category.module';
 import { MediaModule } from './media/media.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { MediaModule } from './media/media.module';
     }),
     CategoryModule,
     MediaModule,
+    UserModule,
   ],
   controllers: [AppController],
   providers: [AppService],
