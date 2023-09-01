@@ -23,6 +23,12 @@ export class UserService {
           id: true,
           name: true,
           email: true,
+          role: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
           createdAt: true,
           updatedAt: true,
         },
@@ -54,6 +60,12 @@ export class UserService {
         id: true,
         name: true,
         email: true,
+        role: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         createdAt: true,
         updatedAt: true,
       },
@@ -80,6 +92,19 @@ export class UserService {
   async getOne(id: number) {
     try {
       const user = await this.prisma.user.findUnique({
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          createdAt: true,
+          updatedAt: true,
+        },
         where: { id },
       });
 

@@ -9,6 +9,7 @@ import { PostModule } from './post/post.module';
 import { CategoryModule } from './category/category.module';
 import { MediaModule } from './media/media.module';
 import { UserModule } from './user/user.module';
+import { RoleModule } from './role/role.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { UserModule } from './user/user.module';
     CategoryModule,
     MediaModule,
     UserModule,
+    RoleModule,
   ],
   controllers: [AppController],
   providers: [AppService],
