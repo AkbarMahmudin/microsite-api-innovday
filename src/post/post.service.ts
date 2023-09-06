@@ -39,7 +39,18 @@ export class PostService {
         payload.keyPost = this.generateKeyForPrivatePost();
       }
 
+      const select = {
+        id: true,
+        title: true,
+        slug: true,
+        thumbnail: true,
+        status: true,
+        tags: true,
+        type: true,
+      };
+
       const postCreated = await this.prisma.post.create({
+        select,
         data: {
           ...payload,
           slug,
@@ -66,6 +77,7 @@ export class PostService {
       published,
       tags,
       keyPost,
+      type,
       page = 1,
       limit = 10,
     } = query;
@@ -74,11 +86,30 @@ export class PostService {
     this.searchByTitle(title)
       .searchByStatus(status, keyPost)
       .searchByPublished(published)
-      .searchByTags(tags);
+      .searchByTags(tags)
+      .searchByType(type);
+
+    const select = {
+      id: true,
+      title: true,
+      slug: true,
+      thumbnail: true,
+      status: true,
+      type: true,
+      category: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      createdAt: true,
+      updatedAt: true,
+    };
 
     const posts = await this.prisma.post.findMany({
       take: Number(limit),
       skip: Number(offset),
+      select,
       orderBy: {
         publishedAt: 'desc',
       },
@@ -155,6 +186,7 @@ export class PostService {
     id: number,
     payload: UpdatePostDto,
     thumbnail?: Express.Multer.File,
+    otherCondition?: any,
   ) {
     let slug = '';
     if (payload.title) {
@@ -186,6 +218,7 @@ export class PostService {
       const postUpdated = await this.prisma.post.update({
         where: {
           id,
+          ...otherCondition,
         },
         data: {
           ...payload,
@@ -205,7 +238,7 @@ export class PostService {
     }
   }
 
-  async delete(id: number) {
+  async delete(id: number, otherCondition?: any) {
     try {
       const { thumbnail } = await this.getOneById(id);
       thumbnail && (await this.mediaService.deleteFile(thumbnail));
@@ -213,6 +246,7 @@ export class PostService {
       await this.prisma.post.delete({
         where: {
           id,
+          ...otherCondition,
         },
       });
 
@@ -290,6 +324,16 @@ export class PostService {
     return this;
   }
 
+  private searchByType(type: string) {
+    if (!type) return this;
+
+    this.queryOptions = {
+      ...this.queryOptions,
+      type,
+    };
+    return this;
+  }
+
   private generateKeyForPrivatePost() {
     return Math.random().toString(36).slice(-8);
   }
@@ -323,7 +367,7 @@ export class PostService {
     }
   }
 
-  private response(data: any, message: string, meta?: any) {
+  response(data: any, message: string, meta?: any) {
     return {
       error: false,
       message,

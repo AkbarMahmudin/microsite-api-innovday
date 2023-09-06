@@ -10,6 +10,7 @@ import { CategoryModule } from './category/category.module';
 import { MediaModule } from './media/media.module';
 import { UserModule } from './user/user.module';
 import { RoleModule } from './role/role.module';
+import { EventModule } from './event/event.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { RoleModule } from './role/role.module';
     MediaModule,
     UserModule,
     RoleModule,
+    EventModule,
   ],
   controllers: [AppController],
   providers: [AppService],

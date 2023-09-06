@@ -11,21 +11,30 @@ datasource db {
 }
 
 model Post {
-  id          Int       @id @default(autoincrement())
-  thumbnail   String?
-  title       String
-  slug        String    @unique
-  content     String?
-  status      String    @default("draft")
-  tags        String[]  @default([])
+  id        Int      @id @default(autoincrement())
+  thumbnail String?
+  title     String
+  slug      String   @unique
+  content   String?
+  status    String   @default("draft")
+  tags      String[] @default([])
+
+  type String @default("post")
+
+  // If Event (Live Stream)
+  startDate DateTime?
+  endDate   DateTime?
+  youtubeId String?
+  slidoId   String?
+
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  category    Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  categoryId  Int?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId Int?
 
-  keyPost     String?   @unique
+  keyPost String? @unique
 
   @@map("posts")
 }
@@ -37,7 +46,7 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  posts     Post[]
+  posts Post[]
 
   @@map("categories")
 }
@@ -50,8 +59,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  role      Role     @relation(fields: [roleId], references: [id])
-  roleId    Int
+  role   Role @relation(fields: [roleId], references: [id])
+  roleId Int
 
   @@map("users")
 }
@@ -62,7 +71,7 @@ model Role {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users     User[]
+  users User[]
 
   @@map("roles")
 }

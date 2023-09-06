@@ -35,6 +35,28 @@ export class CreatePostDto {
   @IsOptional()
   tags?: string[];
 
+  @IsEnum(['post', 'event'], {
+    message: 'Type must be one of these values: post, event',
+  })
+  @IsOptional()
+  type?: string;
+
+  @IsString()
+  @IsOptional()
+  startDate?: Date;
+
+  @IsString()
+  @IsOptional()
+  endDate?: Date;
+
+  @IsString()
+  @IsOptional()
+  youtubeId?: string;
+
+  @IsString()
+  @IsOptional()
+  slidoId?: string;
+
   @IsString()
   @IsOptional()
   publishedAt?: Date;
