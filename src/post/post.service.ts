@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePostDto, UpdatePostDto } from './dto';
 import { MediaService } from 'src/media/media.service';
+import { extname } from 'path';
 
 @Injectable()
 export class PostService {
@@ -29,15 +30,14 @@ export class PostService {
       payload.categoryId = Number(payload.categoryId);
       payload.tags && this.validationTags(payload.tags);
 
-      if (thumbnail) {
-        const { name } = (await this.mediaService.uploadFile(thumbnail))
-          .metadata;
-        payload.thumbnail = name;
-      }
+      // create filename for thumbnail
+      if (thumbnail)
+        payload.thumbnail =
+          Date.now().toString() + extname(thumbnail.originalname);
 
-      if (payload.status === 'private') {
+      // generate key for private post
+      if (payload.status === 'private')
         payload.keyPost = this.generateKeyForPrivatePost();
-      }
 
       const select = {
         id: true,
@@ -57,6 +57,13 @@ export class PostService {
           publishedAt,
         },
       });
+
+      // upload thumbnail to firebase storage
+      if (postCreated) {
+        await this.mediaService.uploadFile(thumbnail, postCreated.thumbnail);
+      }
+
+      // get download url for thumbnail
       postCreated.thumbnail = await this.mediaService.getFileDownloadUrl(
         postCreated.thumbnail,
       );
@@ -106,6 +113,7 @@ export class PostService {
       updatedAt: true,
     };
 
+    // data
     const posts = await this.prisma.post.findMany({
       take: Number(limit),
       skip: Number(offset),
@@ -117,17 +125,33 @@ export class PostService {
         ...this.queryOptions,
       },
     });
-    const count = await this.prisma.post.count();
-    const totalPages = Math.ceil(count / limit);
+
+    // metadata
     const meta = {
-      page: Number(page),
-      limit: Number(limit),
+      ...(await this.prisma.paginate({
+        model: 'post',
+        page,
+        limit,
+      })),
       total_data_per_page: posts.length,
-      total_data: count,
-      total_page: totalPages,
     };
 
-    return this.response({ posts }, 'Posts retrieved successfully', meta);
+    const postsWithThumbnail = await Promise.all(
+      posts.map(async (post) => {
+        post.thumbnail = await this.mediaService.getFileDownloadUrl(
+          post.thumbnail,
+        );
+        return post;
+      }),
+    );
+
+    return this.response(
+      {
+        posts: postsWithThumbnail,
+      },
+      'Posts retrieved successfully',
+      meta,
+    );
   }
 
   async getOne(idOrSlug: number | string) {
@@ -194,7 +218,11 @@ export class PostService {
     }
 
     try {
-      const { tags, thumbnail: thumbnailExist } = await this.getOneById(id);
+      const {
+        type,
+        tags,
+        thumbnail: thumbnailExist,
+      } = await this.getOneById(id);
 
       if (payload.status) {
         payload.publishedAt = await this.setPublishedAt(
@@ -209,13 +237,18 @@ export class PostService {
       }
 
       if (thumbnail) {
-        const { name } = (await this.mediaService.uploadFile(thumbnail))
-          .metadata;
-        payload.thumbnail = name;
-        thumbnailExist && (await this.mediaService.deleteFile(thumbnailExist));
+        payload.thumbnail = `${type}-${Date.now().toString()}${extname(
+          thumbnail.originalname,
+        )}`;
       }
 
       const postUpdated = await this.prisma.post.update({
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          thumbnail: true,
+        },
         where: {
           id,
           ...otherCondition,
@@ -225,9 +258,13 @@ export class PostService {
           ...(slug.length > 0 && { slug }),
         },
       });
-      postUpdated.thumbnail = await this.mediaService.getFileDownloadUrl(
-        postUpdated.thumbnail,
-      );
+
+      // upload thumbnail to firebase storage
+      if (postUpdated && thumbnail) {
+        await this.mediaService.deleteFile(thumbnailExist);
+        await this.mediaService.uploadFile(thumbnail, postUpdated.thumbnail);
+        delete postUpdated.thumbnail;
+      }
 
       return this.response({ post: postUpdated }, 'Post updated successfully');
     } catch (err) {
@@ -241,7 +278,6 @@ export class PostService {
   async delete(id: number, otherCondition?: any) {
     try {
       const { thumbnail } = await this.getOneById(id);
-      thumbnail && (await this.mediaService.deleteFile(thumbnail));
 
       await this.prisma.post.delete({
         where: {
@@ -249,6 +285,9 @@ export class PostService {
           ...otherCondition,
         },
       });
+
+      // delete thumbnail from firebase storage
+      thumbnail && (await this.mediaService.deleteFile(thumbnail));
 
       return this.response({ post_id: id }, 'Post deleted successfully');
     } catch (err) {

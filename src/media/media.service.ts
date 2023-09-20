@@ -20,8 +20,7 @@ export class MediaService {
     return stream;
   }
 
-  async uploadFile(file: Express.Multer.File) {
-    const filename = Date.now() + extname(file.originalname);
+  async uploadFile(file: Express.Multer.File, filename: string) {
     const url = await this.storageService.uploadString(
       filename,
       file.buffer.toString('base64'),
@@ -35,6 +34,10 @@ export class MediaService {
   }
 
   async deleteFile(filename: string) {
+    if (!filename) {
+      return;
+    }
+
     const url = await this.storageService.deleteObject(filename);
     return url;
   }

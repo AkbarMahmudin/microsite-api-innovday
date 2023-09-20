@@ -20,7 +20,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 
 const FILE_VALIDATION = new ParseFilePipe({
   validators: [
-    new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 1 }), // 5MB
+    new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 2 }), // 2MB
     new FileTypeValidator({
       fileType: /image\/(jpe?g|png|webp)$/i,
     }),

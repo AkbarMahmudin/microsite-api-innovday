@@ -18,6 +18,26 @@ export class PrismaService extends PrismaClient {
     });
   }
 
+  async paginate({
+    model,
+    page,
+    limit,
+  }: {
+    model: string;
+    page: number;
+    limit: number;
+  }) {
+    const total = await this[model].count();
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      page: Number(page),
+      limit: Number(limit),
+      total_data: total,
+      total_page: totalPages,
+    };
+  }
+
   prismaError(err: any) {
     const errors: any = {
       P2002: () => {

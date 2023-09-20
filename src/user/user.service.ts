@@ -75,14 +75,14 @@ export class UserService {
       skip: offset,
       take: limit,
     });
-    const count = await this.prisma.user.count();
-    const totalPages = Math.ceil(count / limit);
+
     const meta = {
-      page: Number(page),
-      limit: Number(limit),
+      ...(await this.prisma.paginate({
+        model: 'user',
+        page,
+        limit,
+      })),
       total_data_per_page: users.length,
-      total_data: count,
-      total_pages: totalPages,
     };
 
     this.queryOptions = {};
@@ -169,6 +169,10 @@ export class UserService {
       const user = await this.prisma.user.findUnique({
         where: { id },
       });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
 
       if (!bcrypt.compareSync(payload.currentPassword, user.password)) {
         throw new BadRequestException('Current password is incorrect');

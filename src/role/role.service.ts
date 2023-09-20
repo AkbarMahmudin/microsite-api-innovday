@@ -38,14 +38,13 @@ export class RoleService {
       });
 
       // metadata
-      const count = await this.prisma.role.count();
-      const totalPages = Math.ceil(count / limit);
       const meta = {
-        page: Number(page),
-        limit: Number(limit),
+        ...(await this.prisma.paginate({
+          model: 'role',
+          page,
+          limit,
+        })),
         total_data_per_page: roles.length,
-        total_data: count,
-        total_pages: totalPages,
       };
 
       return this.response({ roles }, 'Roles retrieved successfully', meta);
