@@ -12,11 +12,13 @@ import {
   Post,
   Query,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { EventService } from './event.service';
 import { CreatePostDto, UpdatePostDto } from 'src/post/dto';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { JwtGuard } from 'src/auth/guard';
 
 const FILE_VALIDATION = new ParseFilePipe({
   validators: [
@@ -32,6 +34,7 @@ const FILE_VALIDATION = new ParseFilePipe({
 export class EventController {
   constructor(private eventService: EventService) {}
 
+  @UseGuards(JwtGuard)
   @Post()
   @UseInterceptors(FileInterceptor('thumbnail'))
   async create(
@@ -47,16 +50,29 @@ export class EventController {
     );
   }
 
+  @UseGuards(JwtGuard)
   @Get()
   async getAll(@Query() query: any) {
     return await this.eventService.getAll(query);
   }
 
+  @Get('public')
+  async getAllPublic(@Query() query: any) {
+    return await this.eventService.getAllPublic(query);
+  }
+
+  @Get('public/:idorSlug')
+  async getOnePublic(@Param('idorSlug') idorSlug: string | number) {
+    return await this.eventService.getOnePublic(idorSlug);
+  }
+
+  @UseGuards(JwtGuard)
   @Get(':idorSlug')
   async get(@Param('idorSlug') idorSlug: string | number) {
     return await this.eventService.getOne(idorSlug);
   }
 
+  @UseGuards(JwtGuard)
   @Patch(':id')
   @UseInterceptors(FileInterceptor('thumbnail'))
   async update(
@@ -68,6 +84,7 @@ export class EventController {
     return await this.eventService.update(id, payload, thumbnail);
   }
 
+  @UseGuards(JwtGuard)
   @Delete(':id')
   async delete(@Param('id', ParseIntPipe) id: number) {
     return await this.eventService.delete(id);

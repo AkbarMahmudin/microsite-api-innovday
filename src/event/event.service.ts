@@ -39,11 +39,9 @@ export class EventService {
   }
 
   async getAll(query: any = {}) {
-    const type = 'event';
-
     const { data, meta } = await this.postService.getAll({
       ...query,
-      type,
+      type: 'event',
     });
     const events = data.posts;
 
@@ -57,19 +55,15 @@ export class EventService {
   }
 
   async getOne(idorSlug: string | number) {
-    if (isNaN(Number(idorSlug))) {
-      return await this.getOneBySlug(idorSlug as string);
-    }
-
-    return await this.getOneById(Number(idorSlug));
+    return isNaN(Number(idorSlug))
+      ? await this.getOneBySlug(idorSlug as string)
+      : await this.getOneById(Number(idorSlug));
   }
 
   async getOneBySlug(slug: string) {
-    const type = 'event';
-
     const event = await this.prisma.post.findFirst({
       where: {
-        type,
+        type: 'event',
         slug,
       },
     });
@@ -82,11 +76,9 @@ export class EventService {
   }
 
   async getOneById(id: number) {
-    const type = 'event';
-
     const event = await this.prisma.post.findFirst({
       where: {
-        type,
+        type: 'event',
         id,
       },
     });
@@ -143,6 +135,33 @@ export class EventService {
       err.code && this.prisma.prismaError(err);
       throw err;
     }
+  }
+
+  // ------------------------------ Public -------------------------------
+  async getAllPublic(query: any = {}) {
+    const { data, meta } = await this.postService.getAllPublic({
+      ...query,
+      type: 'event',
+    });
+
+    return this.postService.response(
+      {
+        events: data.posts,
+      },
+      'Events retrieved successfully',
+      meta,
+    );
+  }
+
+  async getOnePublic(idorSlug: string | number, query: any = {}) {
+    const { post: event } = (
+      await this.postService.getOnePublic(idorSlug, {
+        ...query,
+        type: 'event',
+      })
+    ).data;
+
+    return this.postService.response({ event }, 'Event retrieved successfully');
   }
 
   // ------------------------------ Event -------------------------------

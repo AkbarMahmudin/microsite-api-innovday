@@ -11,6 +11,7 @@ import { MediaModule } from './media/media.module';
 import { UserModule } from './user/user.module';
 import { RoleModule } from './role/role.module';
 import { EventModule } from './event/event.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { EventModule } from './event/event.module';
     UserModule,
     RoleModule,
     EventModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

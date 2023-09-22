@@ -73,14 +73,21 @@ export class CategoryService {
       };
     }
 
-    const categories = await this.prisma.category.findMany(options);
-    const count = await this.prisma.category.count();
-    const totalPages = Math.ceil(count / limit);
+    const [categories, count] = await this.prisma.$transaction([
+      this.prisma.category.findMany(options),
+      this.prisma.category.count({
+        where: {
+          ...options.where,
+        },
+      }),
+    ]);
     const meta = {
-      page: Number(page),
-      limit: Number(limit),
-      total_data: categories.length,
-      total_page: totalPages,
+      ...(await this.prisma.paginate({
+        count,
+        page,
+        limit,
+      })),
+      total_data_per_page: categories.length,
     };
 
     return this.response(
@@ -100,9 +107,6 @@ export class CategoryService {
 
   private async getOneById(id: number) {
     const category = await this.prisma.category.findUnique({
-      include: {
-        posts: true,
-      },
       where: {
         id,
       },
@@ -117,9 +121,6 @@ export class CategoryService {
 
   private async getOneBySlug(slug: string) {
     const category = await this.prisma.category.findUnique({
-      include: {
-        posts: true,
-      },
       where: {
         slug,
       },

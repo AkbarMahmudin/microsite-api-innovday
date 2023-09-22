@@ -19,21 +19,20 @@ export class PrismaService extends PrismaClient {
   }
 
   async paginate({
-    model,
+    count,
     page,
     limit,
   }: {
-    model: string;
+    count: any;
     page: number;
     limit: number;
   }) {
-    const total = await this[model].count();
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.ceil(count / limit);
 
     return {
       page: Number(page),
       limit: Number(limit),
-      total_data: total,
+      total_data: count,
       total_page: totalPages,
     };
   }

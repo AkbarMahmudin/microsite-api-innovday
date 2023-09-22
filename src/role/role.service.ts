@@ -29,18 +29,25 @@ export class RoleService {
       const offset = (page - 1) * limit;
       this.searchByName(name);
 
-      const roles = await this.prisma.role.findMany({
-        skip: Number(offset),
-        take: Number(limit),
-        where: {
-          ...this.queryOptions,
-        },
-      });
+      const [roles, count] = await this.prisma.$transaction([
+        this.prisma.role.findMany({
+          skip: Number(offset),
+          take: Number(limit),
+          where: {
+            ...this.queryOptions,
+          },
+        }),
+        this.prisma.role.count({
+          where: {
+            ...this.queryOptions,
+          },
+        }),
+      ]);
 
       // metadata
       const meta = {
         ...(await this.prisma.paginate({
-          model: 'role',
+          count,
           page,
           limit,
         })),

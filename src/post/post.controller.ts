@@ -12,16 +12,18 @@ import {
   Post,
   Query,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 import { PostService } from './post.service';
 import { CreatePostDto, UpdatePostDto } from './dto';
+import { JwtGuard } from '../auth/guard';
 
 const FILE_VALIDATION = new ParseFilePipe({
   validators: [
-    new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 1 }), // 5MB
+    new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 2 }), // 2MB
     new FileTypeValidator({
       fileType: /image\/(jpe?g|png|webp)$/i,
     }),
@@ -33,6 +35,7 @@ const FILE_VALIDATION = new ParseFilePipe({
 export class PostController {
   constructor(private postService: PostService) {}
 
+  @UseGuards(JwtGuard)
   @Post()
   @UseInterceptors(FileInterceptor('thumbnail'))
   async create(
@@ -48,16 +51,33 @@ export class PostController {
     );
   }
 
+  @UseGuards(JwtGuard)
   @Get()
   async getAll(@Query() query: any = {}) {
     return await this.postService.getAll(query);
   }
 
+  // Get all posts for public user
+  @Get('public')
+  async getAllPublic(@Query() query: any = {}) {
+    return await this.postService.getAllPublic(query);
+  }
+
+  @Get('public/:idorSlug')
+  async getOnePublic(
+    @Param('idorSlug') idorSlug: string | number,
+    @Query() query: any = {},
+  ) {
+    return await this.postService.getOnePublic(idorSlug, query);
+  }
+
+  @UseGuards(JwtGuard)
   @Get(':idorSlug')
   async getOne(@Param('idorSlug') idorSlug: string | number) {
     return await this.postService.getOne(idorSlug);
   }
 
+  @UseGuards(JwtGuard)
   @Patch(':id')
   @UseInterceptors(FileInterceptor('thumbnail'))
   async update(
@@ -68,13 +88,9 @@ export class PostController {
     return await this.postService.update(id, payload, thumbnail);
   }
 
+  @UseGuards(JwtGuard)
   @Delete(':id')
   async delete(@Param('id', ParseIntPipe) id: number) {
     return await this.postService.delete(id);
-  }
-
-  @Get('thumbnail/:thumbnail')
-  async serveThumbnail(@Param('thumbnail') thumbnail: string) {
-    return await this.postService.getPostThumbnail(thumbnail);
   }
 }

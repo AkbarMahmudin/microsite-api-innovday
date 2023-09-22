@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreatePostDto, UpdatePostDto } from './dto';
+import { CreatePostDto, PostStatus, UpdatePostDto } from './dto';
 import { MediaService } from 'src/media/media.service';
 import { extname } from 'path';
 
@@ -59,7 +59,7 @@ export class PostService {
       });
 
       // upload thumbnail to firebase storage
-      if (postCreated) {
+      if (postCreated && thumbnail) {
         await this.mediaService.uploadFile(thumbnail, postCreated.thumbnail);
       }
 
@@ -78,24 +78,9 @@ export class PostService {
   }
 
   async getAll(query: any = {}) {
-    const {
-      title,
-      status,
-      published,
-      tags,
-      keyPost,
-      type,
-      page = 1,
-      limit = 10,
-    } = query;
+    const { page = 1, limit = 10 } = query;
     const offset = (page - 1) * limit;
-
-    this.searchByTitle(title)
-      .searchByStatus(status, keyPost)
-      .searchByPublished(published)
-      .searchByTags(tags)
-      .searchByType(type);
-
+    const where = { ...this.filterPost(query) };
     const select = {
       id: true,
       title: true,
@@ -107,6 +92,7 @@ export class PostService {
         select: {
           id: true,
           name: true,
+          slug: true,
         },
       },
       createdAt: true,
@@ -114,22 +100,23 @@ export class PostService {
     };
 
     // data
-    const posts = await this.prisma.post.findMany({
-      take: Number(limit),
-      skip: Number(offset),
-      select,
-      orderBy: {
-        publishedAt: 'desc',
-      },
-      where: {
-        ...this.queryOptions,
-      },
-    });
+    const [posts, count] = await this.prisma.$transaction([
+      this.prisma.post.findMany({
+        take: Number(limit),
+        skip: Number(offset),
+        select,
+        where,
+        orderBy: {
+          publishedAt: 'desc',
+        },
+      }),
+      this.prisma.post.count({ where }),
+    ]);
 
     // metadata
     const meta = {
       ...(await this.prisma.paginate({
-        model: 'post',
+        count,
         page,
         limit,
       })),
@@ -154,15 +141,25 @@ export class PostService {
     );
   }
 
-  async getOne(idOrSlug: number | string) {
+  async getOne(idOrSlug: number | string, query?: any, otherCondition?: any) {
     const post = isNaN(Number(idOrSlug))
-      ? await this.getOneBySlug(idOrSlug as string)
-      : await this.getOneById(Number(idOrSlug));
+      ? await this.getOneBySlug(idOrSlug as string, otherCondition)
+      : await this.getOneById(Number(idOrSlug), otherCondition);
+
+    if (post.status === 'private') {
+      if (!query.keyPost) {
+        throw new BadRequestException('This post is private');
+      }
+
+      if (query.keyPost !== post.keyPost) {
+        throw new BadRequestException('Key post is invalid');
+      }
+    }
 
     return this.response({ post }, 'Post retrieved successfully');
   }
 
-  private async getOneBySlug(slug: string) {
+  private async getOneBySlug(slug: string, otherCondition?: any) {
     const post = await this.prisma.post.findUnique({
       include: {
         category: {
@@ -174,6 +171,7 @@ export class PostService {
       },
       where: {
         slug,
+        ...otherCondition,
       },
     });
 
@@ -184,7 +182,7 @@ export class PostService {
     return post;
   }
 
-  private async getOneById(id: number) {
+  private async getOneById(id: number, otherCondition?: any) {
     const post = await this.prisma.post.findUnique({
       include: {
         category: {
@@ -196,6 +194,7 @@ export class PostService {
       },
       where: {
         id: Number(id),
+        ...otherCondition,
       },
     });
 
@@ -229,6 +228,10 @@ export class PostService {
           payload.status,
           payload.publishedAt,
         );
+
+        payload.status === 'private'
+          ? (payload.keyPost = this.generateKeyForPrivatePost())
+          : (payload.keyPost = null);
       }
 
       if (payload.tags) {
@@ -298,6 +301,91 @@ export class PostService {
     }
   }
 
+  // ---------------------------- Public User ----------------------------
+  async getAllPublic(query: any = {}) {
+    const { page = 1, limit = 10 } = query;
+    const offset = (page - 1) * limit;
+    const select = {
+      id: true,
+      title: true,
+      slug: true,
+      thumbnail: true,
+      status: true,
+      type: true,
+      category: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      createdAt: true,
+      updatedAt: true,
+    };
+    const excludeStatus = [
+      PostStatus.PRIVATE,
+      PostStatus.ARCHIVED,
+      PostStatus.DRAFT,
+      PostStatus.UNPUBLISHED,
+    ];
+    const where = {
+      ...this.filterPost(query),
+      status: {
+        notIn: excludeStatus,
+      },
+    };
+
+    // data
+    const [posts, count] = await this.prisma.$transaction([
+      this.prisma.post.findMany({
+        take: Number(limit),
+        skip: Number(offset),
+        select,
+        orderBy: {
+          publishedAt: 'desc',
+        },
+        where,
+      }),
+      this.prisma.post.count({ where }),
+    ]);
+
+    // metadata
+    const meta = {
+      ...(await this.prisma.paginate({
+        count,
+        page,
+        limit,
+      })),
+      total_data_per_page: posts.length,
+    };
+
+    const postsWithThumbnail = await Promise.all(
+      posts.map(async (post) => {
+        post.thumbnail = await this.mediaService.getFileDownloadUrl(
+          post.thumbnail,
+        );
+        return post;
+      }),
+    );
+
+    return this.response(
+      {
+        posts: postsWithThumbnail,
+      },
+      'Posts retrieved successfully',
+      meta,
+    );
+  }
+
+  async getOnePublic(idOrSlug: number | string, query?: any) {
+    const condition = {
+      status: {
+        notIn: [PostStatus.ARCHIVED, PostStatus.DRAFT, PostStatus.UNPUBLISHED],
+      },
+    };
+
+    return await this.getOne(idOrSlug, query, condition);
+  }
+
   // ---------------------------- Other CRUD ----------------------------
 
   private searchByTitle(title: string) {
@@ -313,28 +401,16 @@ export class PostService {
     return this;
   }
 
-  private searchByStatus(status: string, keyPost?: string) {
+  private searchByStatus(status: string) {
     if (!status) return this;
 
-    if (status === 'private') {
-      if (!keyPost) {
-        throw new BadRequestException('Key post is required');
-      }
-      this.queryOptions = {
-        ...this.queryOptions,
-        status: {
-          in: ['private'],
-        },
-        keyPost,
-      };
-    } else {
-      this.queryOptions = {
-        ...this.queryOptions,
-        status: {
-          in: typeof status === 'string' ? [status] : status,
-        },
-      };
-    }
+    this.queryOptions = {
+      ...this.queryOptions,
+      status: {
+        in: typeof status === 'string' ? [status] : status,
+      },
+    };
+
     return this;
   }
 
@@ -373,6 +449,27 @@ export class PostService {
     return this;
   }
 
+  private searchByCategory(idOrSlug: number | string) {
+    if (!idOrSlug) return this;
+
+    const condition = isNaN(Number(idOrSlug))
+      ? {
+          OR: [
+            { slug: idOrSlug as string },
+            { name: { contains: idOrSlug as string, mode: 'insensitive' } },
+          ],
+        }
+      : { id: Number(idOrSlug) };
+
+    this.queryOptions = {
+      ...this.queryOptions,
+      category: {
+        ...condition,
+      },
+    };
+    return this;
+  }
+
   private generateKeyForPrivatePost() {
     return Math.random().toString(36).slice(-8);
   }
@@ -395,15 +492,29 @@ export class PostService {
     return publishedAt;
   }
 
-  async getPostThumbnail(thumbnail: string) {
-    const stream = await this.mediaService.getFileStream(thumbnail);
-    return stream;
-  }
-
   private validationTags(tags: string[]) {
     if (tags.filter((tag) => !tag).length > 0) {
       throw new BadRequestException('Tags cannot be empty');
     }
+  }
+
+  private filterPost(query: any) {
+    const { title, status, published, tags, type, category } = query;
+
+    this.searchByTitle(title)
+      .searchByStatus(status)
+      .searchByPublished(published)
+      .searchByTags(tags)
+      .searchByType(type)
+      .searchByCategory(category);
+
+    const criteria = {
+      ...this.queryOptions,
+    };
+
+    this.queryOptions = {};
+
+    return criteria;
   }
 
   response(data: any, message: string, meta?: any) {

@@ -55,30 +55,37 @@ export class UserService {
 
     this.searchByNameOrEmail(name, email);
 
-    const users = await this.prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: {
-          select: {
-            id: true,
-            name: true,
+    const [users, count] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
+          createdAt: true,
+          updatedAt: true,
         },
-        createdAt: true,
-        updatedAt: true,
-      },
-      where: {
-        ...this.queryOptions,
-      },
-      skip: offset,
-      take: limit,
-    });
+        where: {
+          ...this.queryOptions,
+        },
+        skip: offset,
+        take: limit,
+      }),
+      this.prisma.user.count({
+        where: {
+          ...this.queryOptions,
+        },
+      }),
+    ]);
 
     const meta = {
       ...(await this.prisma.paginate({
-        model: 'user',
+        count,
         page,
         limit,
       })),

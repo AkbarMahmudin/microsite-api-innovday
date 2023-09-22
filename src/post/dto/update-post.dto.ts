@@ -59,4 +59,8 @@ export class UpdatePostDto {
   @IsOptional()
   @Type(() => Number)
   categoryId?: number;
+
+  @IsString()
+  @IsOptional()
+  keyPost?: string;
 }

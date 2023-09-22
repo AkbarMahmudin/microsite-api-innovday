@@ -8,14 +8,17 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CategoryDto } from './dto';
+import { JwtGuard } from 'src/auth/guard';
 
 @Controller('categories')
 export class CategoryController {
   constructor(private categoryService: CategoryService) {}
 
+  @UseGuards(JwtGuard)
   @Post()
   async create(@Body() payload: CategoryDto) {
     return this.categoryService.create(payload);
@@ -31,6 +34,7 @@ export class CategoryController {
     return this.categoryService.getOne(idorslug);
   }
 
+  @UseGuards(JwtGuard)
   @Patch(':id')
   async update(
     @Param('id', ParseIntPipe) id: number,
@@ -39,6 +43,7 @@ export class CategoryController {
     return this.categoryService.update(id, payload);
   }
 
+  @UseGuards(JwtGuard)
   @Delete(':id')
   async delete(@Param('id', ParseIntPipe) id: number) {
     return this.categoryService.delete(id);
