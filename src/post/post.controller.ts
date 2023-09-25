@@ -47,9 +47,9 @@ export class PostController {
     @Req() req: Request,
   ) {
     return await this.postService.create(
+      req['user']['sub'],
       {
         ...payload,
-        authorId: req['user']['sub'],
       },
       thumbnail,
     );
@@ -68,11 +68,8 @@ export class PostController {
   }
 
   @Get(':idorSlug/public')
-  async getOnePublic(
-    @Param('idorSlug') idorSlug: string | number,
-    @Query() query: any = {},
-  ) {
-    return await this.postService.getOnePublic(idorSlug, query);
+  async getOnePublic(@Param('idorSlug') idorSlug: string | number) {
+    return await this.postService.getOnePublic(idorSlug);
   }
 
   @UseGuards(JwtGuard)
@@ -88,8 +85,10 @@ export class PostController {
     @Param('id', ParseIntPipe) id: number,
     @Body() payload: UpdatePostDto,
     @UploadedFile(FILE_VALIDATION) thumbnail: Express.Multer.File,
+    @Req() req: Request,
   ) {
-    return await this.postService.update(id, payload, thumbnail);
+    const userId = req['user']['sub'];
+    return await this.postService.update(id, userId, payload, thumbnail);
   }
 
   @UseGuards(JwtGuard)

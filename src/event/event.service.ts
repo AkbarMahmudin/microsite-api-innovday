@@ -20,10 +20,10 @@ export class EventService {
 
       const { post: eventCreated } = (
         await this.postService.create(
+          1,
           {
             ...payload,
             type: 'event',
-            authorId: 1,
           },
           thumbnail,
         )
@@ -100,6 +100,7 @@ export class EventService {
       const { post: eventUpdated } = (
         await this.postService.update(
           id,
+          1,
           {
             ...payload,
           },
@@ -154,10 +155,9 @@ export class EventService {
     );
   }
 
-  async getOnePublic(idorSlug: string | number, query: any = {}) {
+  async getOnePublic(idorSlug: string | number) {
     const { post: event } = (
       await this.postService.getOnePublic(idorSlug, {
-        ...query,
         type: 'event',
       })
     ).data;

@@ -229,7 +229,6 @@ Params :
 * published: boolean
 * category: number|string
 * tags[]: string
-* keyPost: string
 
 Response :
 

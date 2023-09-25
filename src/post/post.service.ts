@@ -21,12 +21,13 @@ export class PostService {
   // ---------------------------- Main CRUD ----------------------------
 
   async create(
-    payload: CreatePostDto & { authorId: number },
+    userId: number,
+    payload: CreatePostDto,
     thumbnail?: Express.Multer.File,
   ) {
     try {
       // validate author
-      await this.validateAuthor(payload.authorId);
+      await this.validateAuthor(userId);
 
       const slug = payload.title.toLowerCase().replace(/ /g, '-');
       const publishedAt = await this.setPublishedAt(
@@ -60,6 +61,7 @@ export class PostService {
         select,
         data: {
           ...payload,
+          authorId: userId,
           slug,
           publishedAt,
         },
@@ -148,7 +150,7 @@ export class PostService {
     );
   }
 
-  async getOne(idOrSlug: number | string, query?: any, otherCondition?: any) {
+  async getOne(idOrSlug: number | string, otherCondition?: any) {
     const post = isNaN(Number(idOrSlug))
       ? await this.getOneBySlug(idOrSlug as string, otherCondition)
       : await this.getOneById(Number(idOrSlug), otherCondition);
@@ -218,19 +220,25 @@ export class PostService {
 
   async update(
     id: number,
+    userId,
     payload: UpdatePostDto,
     thumbnail?: Express.Multer.File,
     otherCondition?: any,
   ) {
-    let slug = '';
-    if (payload.title) slug = payload.title.toLowerCase().replace(/ /g, '-');
+    const slug = payload.title
+      ? payload.title.toLowerCase().replace(/ /g, '-')
+      : '';
 
     try {
       const {
+        author,
         type,
         tags,
         thumbnail: thumbnailExist,
       } = await this.getOneById(id);
+
+      // validate author
+      await this.validateAuthor(userId, author.id);
 
       if (payload.status) {
         payload.publishedAt = await this.setPublishedAt(
@@ -267,7 +275,6 @@ export class PostService {
 
       // upload thumbnail to firebase storage
       if (postUpdated && thumbnail) {
-        console.log('thumbnailExist', thumbnailExist);
         await this.mediaService.deleteFile(thumbnailExist);
         await this.mediaService.uploadFile(thumbnail, postUpdated.thumbnail);
         delete postUpdated.thumbnail;
@@ -383,28 +390,21 @@ export class PostService {
     );
   }
 
-  async getOnePublic(idOrSlug: number | string, query?: any) {
+  async getOnePublic(idOrSlug: number | string, otherCondition?: any) {
     const excludeStatus = [
       PostStatus.ARCHIVED,
       PostStatus.DRAFT,
       PostStatus.UNPUBLISHED,
+      PostStatus.PRIVATE,
     ];
     const condition = {
+      ...otherCondition,
       status: {
         notIn: excludeStatus,
       },
     };
 
-    const postResponse = await this.getOne(idOrSlug, query, condition);
-
-    const { post } = postResponse.data;
-
-    // Check if post is private
-    if (post.status === 'private') {
-      throw new ForbiddenException('This post is private');
-    }
-
-    return postResponse;
+    return await this.getOne(idOrSlug, condition);
   }
 
   // ---------------------------- Other CRUD (Utils) ----------------------------
@@ -538,16 +538,31 @@ export class PostService {
     return criteria;
   }
 
-  private async validateAuthor(authorId: number) {
-    const isValidate = await this.prisma.user.count({
+  private async validateAuthor(userId: number, authorId?: any) {
+    const user = await this.prisma.user.findUnique({
+      select: {
+        id: true,
+        role: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
       where: {
-        id: Number(authorId),
+        id: Number(userId),
       },
     });
 
-    if (isValidate === 0) {
+    if (!user) {
       throw new BadRequestException('Author is not valid');
     }
+
+    if (user.role.name !== 'admin' && userId !== authorId) {
+      throw new ForbiddenException('You are not the author of this post');
+    }
+
+    return user;
   }
 
   response(data: any, message: string, meta?: any) {
