@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreatePostDto, UpdatePostDto } from 'src/post/dto';
 import { PostService } from 'src/post/post.service';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -14,19 +10,16 @@ export class EventService {
     private postService: PostService,
   ) {}
 
-  async create(payload: CreatePostDto, thumbnail?: Express.Multer.File) {
+  async create(
+    userId: number,
+    payload: CreatePostDto,
+    thumbnail?: Express.Multer.File,
+  ) {
     try {
       this.createAsEvent(payload);
 
       const { post: eventCreated } = (
-        await this.postService.create(
-          1,
-          {
-            ...payload,
-            type: 'event',
-          },
-          thumbnail,
-        )
+        await this.postService.create(userId, payload, thumbnail)
       ).data;
 
       return this.postService.response(
@@ -56,63 +49,30 @@ export class EventService {
   }
 
   async getOne(idorSlug: string | number) {
-    return isNaN(Number(idorSlug))
-      ? await this.getOneBySlug(idorSlug as string)
-      : await this.getOneById(Number(idorSlug));
-  }
-
-  async getOneBySlug(slug: string) {
-    const event = await this.prisma.post.findFirst({
-      where: {
+    const { post: event } = (
+      await this.postService.getOne(idorSlug, {
         type: 'event',
-        slug,
-      },
-    });
-
-    if (!event) {
-      throw new NotFoundException('Event not found');
-    }
-
-    return this.postService.response({ event }, 'Event retrieved successfully');
-  }
-
-  async getOneById(id: number) {
-    const event = await this.prisma.post.findFirst({
-      where: {
-        type: 'event',
-        id,
-      },
-    });
-
-    if (!event) {
-      throw new NotFoundException('Event not found');
-    }
+      })
+    ).data;
 
     return this.postService.response({ event }, 'Event retrieved successfully');
   }
 
   async update(
     id: number,
+    userId: number,
     payload: UpdatePostDto,
     thumbnail?: Express.Multer.File,
   ) {
     try {
-      const { post: eventUpdated } = (
-        await this.postService.update(
-          id,
-          1,
-          {
-            ...payload,
-          },
-          thumbnail,
-          {
-            type: 'event',
-          },
-        )
+      const { post_id: event_id } = (
+        await this.postService.update(id, userId, payload, thumbnail, {
+          type: 'event',
+        })
       ).data;
 
       return this.postService.response(
-        { event: eventUpdated },
+        { event_id },
         'Event updated successfully',
       );
     } catch (err) {
@@ -121,10 +81,10 @@ export class EventService {
     }
   }
 
-  async delete(id: number) {
+  async delete(id: number, userId: number) {
     try {
       const { post_id: event_id } = (
-        await this.postService.delete(id, {
+        await this.postService.delete(id, userId, {
           type: 'event',
         })
       ).data;
@@ -165,6 +125,63 @@ export class EventService {
     return this.postService.response({ event }, 'Event retrieved successfully');
   }
 
+  // ------------------------------ Private ------------------------------
+  async getOnePrivate(key: string) {
+    if (!key) {
+      throw new BadRequestException('Key is required');
+    }
+
+    const event = await this.prisma.post.findUnique({
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      where: {
+        keyPost: key,
+        type: 'event',
+      },
+    });
+
+    if (!event) {
+      throw new BadRequestException('Event not found');
+    }
+
+    return this.postService.response({ event }, 'Event retrieved successfully');
+  }
+
+  // ------------------------------ Coming Soon ------------------------------
+  async getAllComingSoon(query: any = {}) {
+    const { data, meta } = await this.postService.getAllPublic(
+      {
+        ...query,
+        type: 'event',
+      },
+      {
+        startDate: {
+          gt: new Date(),
+        },
+      },
+    );
+
+    return this.postService.response(
+      {
+        events: data.posts,
+      },
+      'Events retrieved successfully',
+      meta,
+    );
+  }
+
   // ------------------------------ Event -------------------------------
 
   private createAsEvent(payload: CreatePostDto) {
@@ -181,6 +198,7 @@ export class EventService {
     payload.endDate = endDate;
     payload.youtubeId = youtubeId;
     payload.slidoId = slidoId;
+    payload.type = 'event';
   }
 
   private setEventDate(startDate: Date, endDate: Date) {

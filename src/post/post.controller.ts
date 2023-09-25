@@ -46,8 +46,10 @@ export class PostController {
     thumbnail: Express.Multer.File,
     @Req() req: Request,
   ) {
+    const userId = req['user']['sub'];
+
     return await this.postService.create(
-      req['user']['sub'],
+      userId,
       {
         ...payload,
       },
@@ -88,12 +90,15 @@ export class PostController {
     @Req() req: Request,
   ) {
     const userId = req['user']['sub'];
+
     return await this.postService.update(id, userId, payload, thumbnail);
   }
 
   @UseGuards(JwtGuard)
   @Delete(':id')
-  async delete(@Param('id', ParseIntPipe) id: number) {
-    return await this.postService.delete(id);
+  async delete(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
+    const userId = req['user']['sub'];
+
+    return await this.postService.delete(id, userId);
   }
 }

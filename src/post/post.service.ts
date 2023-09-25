@@ -292,9 +292,12 @@ export class PostService {
     }
   }
 
-  async delete(id: number, otherCondition?: any) {
+  async delete(id: number, userId: number, otherCondition?: any) {
     try {
-      const { thumbnail } = await this.getOneById(id);
+      const { thumbnail, author } = await this.getOneById(id);
+
+      // validate author
+      await this.validateAuthor(userId, author.id);
 
       await this.prisma.post.delete({
         where: {
@@ -316,7 +319,7 @@ export class PostService {
   }
 
   // ---------------------------- Public User ----------------------------
-  async getAllPublic(query: any = {}) {
+  async getAllPublic(query: any = {}, otherCondition?: any) {
     const { page = 1, limit = 10 } = query;
     const offset = (page - 1) * limit;
     const select = {
@@ -343,6 +346,7 @@ export class PostService {
     ];
     const where = {
       ...this.filterPost(query),
+      ...otherCondition,
       status: {
         notIn: excludeStatus,
       },
