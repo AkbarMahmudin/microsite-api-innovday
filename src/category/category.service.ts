@@ -136,7 +136,7 @@ export class CategoryService {
   async update(id: number, payload: { name: string }) {
     try {
       const { name } = payload;
-      const categoryUpdated = await this.prisma.category.update({
+      await this.prisma.category.update({
         where: {
           id,
         },
@@ -147,7 +147,7 @@ export class CategoryService {
       });
 
       return this.response(
-        { category: categoryUpdated },
+        { category_id: id },
         'Category updated successfully',
       );
     } catch (err) {
@@ -169,6 +169,28 @@ export class CategoryService {
       return this.response(
         { category_id: id },
         'Category deleted successfully',
+      );
+    } catch (err) {
+      if (err.code) {
+        this.prisma.prismaError(err);
+      }
+      throw err;
+    }
+  }
+
+  async deleteMany(ids: number[]) {
+    try {
+      await this.prisma.category.deleteMany({
+        where: {
+          id: {
+            in: ids,
+          },
+        },
+      });
+
+      return this.response(
+        { category_ids: ids },
+        'Categories deleted successfully',
       );
     } catch (err) {
       if (err.code) {

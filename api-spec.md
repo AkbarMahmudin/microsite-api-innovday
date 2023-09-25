@@ -528,45 +528,6 @@ Response :
 }
 ```
 
-### Get Category Posts
-
-Method : `GET`
-
-Endpoint : `/categories/:idorslug/posts`
-
-Params :
-
-* page: number
-* limit: number
-* title: string
-* status: string
-* published: boolean
-* type: string
-* category: number|string
-* tags[]: string
-
-Response :
-
-```json
-{
-  "error": false,
-  "message": "",
-  "data": {
-    "category": {
-      ...
-    },
-    "posts": [...]
-  },
-  "meta": {
-    "page": 1,
-    "limit": 10,
-    "total_data": 10,
-    "total_page": 1,
-    "total_data_per_page": 10
-  }
-}
-```
-
 ### Create Category
 
 Method : `POST`
@@ -632,6 +593,33 @@ Method : `DELETE`
 Endpoint : `/categories/:id`
 
 Auth : `Bearer`
+
+Response :
+
+```json
+{
+  "error": false,
+  "message": "",
+  "data": {
+    "category_id": 1
+  }
+}
+```
+
+### Delete Categories
+
+Method : `DELETE`
+
+Endpoint : `/categories`
+
+Auth : `Bearer`
+
+Body :
+```typescript
+{
+  ids: number[]
+}
+```
 
 Response :
 

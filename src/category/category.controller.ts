@@ -13,12 +13,16 @@ import {
 import { CategoryService } from './category.service';
 import { CategoryDto } from './dto';
 import { JwtGuard } from 'src/auth/guard';
+import { Roles } from 'src/auth/decorator/roles.decorator';
+import { Role } from 'src/auth/interface/role.enum';
+import { RolesGuard } from 'src/auth/guard/roles.guard';
 
 @Controller('categories')
 export class CategoryController {
   constructor(private categoryService: CategoryService) {}
 
-  @UseGuards(JwtGuard)
+  @Roles(Role.ADMIN)
+  @UseGuards(JwtGuard, RolesGuard)
   @Post()
   async create(@Body() payload: CategoryDto) {
     return this.categoryService.create(payload);
@@ -34,7 +38,8 @@ export class CategoryController {
     return this.categoryService.getOne(idorslug);
   }
 
-  @UseGuards(JwtGuard)
+  @Roles(Role.ADMIN)
+  @UseGuards(JwtGuard, RolesGuard)
   @Patch(':id')
   async update(
     @Param('id', ParseIntPipe) id: number,
@@ -43,9 +48,17 @@ export class CategoryController {
     return this.categoryService.update(id, payload);
   }
 
-  @UseGuards(JwtGuard)
+  @Roles(Role.ADMIN)
+  @UseGuards(JwtGuard, RolesGuard)
   @Delete(':id')
   async delete(@Param('id', ParseIntPipe) id: number) {
     return this.categoryService.delete(id);
+  }
+
+  @Roles(Role.ADMIN)
+  @UseGuards(JwtGuard, RolesGuard)
+  @Delete()
+  async deleteMany(@Body() payload: { ids: number[] }) {
+    return this.categoryService.deleteMany(payload.ids);
   }
 }
