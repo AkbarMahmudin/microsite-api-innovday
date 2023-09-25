@@ -23,6 +23,7 @@ export class EventService {
           {
             ...payload,
             type: 'event',
+            authorId: 1,
           },
           thumbnail,
         )

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -19,8 +20,14 @@ export class PostService {
 
   // ---------------------------- Main CRUD ----------------------------
 
-  async create(payload: CreatePostDto, thumbnail?: Express.Multer.File) {
+  async create(
+    payload: CreatePostDto & { authorId: number },
+    thumbnail?: Express.Multer.File,
+  ) {
     try {
+      // validate author
+      await this.validateAuthor(payload.authorId);
+
       const slug = payload.title.toLowerCase().replace(/ /g, '-');
       const publishedAt = await this.setPublishedAt(
         payload.status,
@@ -33,7 +40,7 @@ export class PostService {
       // create filename for thumbnail
       if (thumbnail)
         payload.thumbnail =
-          Date.now().toString() + extname(thumbnail.originalname);
+          'post-' + Date.now().toString() + extname(thumbnail.originalname);
 
       // generate key for private post
       if (payload.status === 'private')
@@ -146,15 +153,7 @@ export class PostService {
       ? await this.getOneBySlug(idOrSlug as string, otherCondition)
       : await this.getOneById(Number(idOrSlug), otherCondition);
 
-    if (post.status === 'private') {
-      if (!query.keyPost) {
-        throw new BadRequestException('This post is private');
-      }
-
-      if (query.keyPost !== post.keyPost) {
-        throw new BadRequestException('Key post is invalid');
-      }
-    }
+    post.thumbnail = await this.mediaService.getFileDownloadUrl(post.thumbnail);
 
     return this.response({ post }, 'Post retrieved successfully');
   }
@@ -166,6 +165,12 @@ export class PostService {
           select: {
             name: true,
             slug: true,
+          },
+        },
+        author: {
+          select: {
+            id: true,
+            name: true,
           },
         },
       },
@@ -191,6 +196,12 @@ export class PostService {
             slug: true,
           },
         },
+        author: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
       where: {
         id: Number(id),
@@ -212,9 +223,7 @@ export class PostService {
     otherCondition?: any,
   ) {
     let slug = '';
-    if (payload.title) {
-      slug = payload.title.toLowerCase().replace(/ /g, '-');
-    }
+    if (payload.title) slug = payload.title.toLowerCase().replace(/ /g, '-');
 
     try {
       const {
@@ -246,12 +255,6 @@ export class PostService {
       }
 
       const postUpdated = await this.prisma.post.update({
-        select: {
-          id: true,
-          title: true,
-          slug: true,
-          thumbnail: true,
-        },
         where: {
           id,
           ...otherCondition,
@@ -264,12 +267,16 @@ export class PostService {
 
       // upload thumbnail to firebase storage
       if (postUpdated && thumbnail) {
+        console.log('thumbnailExist', thumbnailExist);
         await this.mediaService.deleteFile(thumbnailExist);
         await this.mediaService.uploadFile(thumbnail, postUpdated.thumbnail);
         delete postUpdated.thumbnail;
       }
 
-      return this.response({ post: postUpdated }, 'Post updated successfully');
+      return this.response(
+        { post_id: postUpdated.id },
+        'Post updated successfully',
+      );
     } catch (err) {
       if (err.code) {
         this.prisma.prismaError(err);
@@ -377,16 +384,30 @@ export class PostService {
   }
 
   async getOnePublic(idOrSlug: number | string, query?: any) {
+    const excludeStatus = [
+      PostStatus.ARCHIVED,
+      PostStatus.DRAFT,
+      PostStatus.UNPUBLISHED,
+    ];
     const condition = {
       status: {
-        notIn: [PostStatus.ARCHIVED, PostStatus.DRAFT, PostStatus.UNPUBLISHED],
+        notIn: excludeStatus,
       },
     };
 
-    return await this.getOne(idOrSlug, query, condition);
+    const postResponse = await this.getOne(idOrSlug, query, condition);
+
+    const { post } = postResponse.data;
+
+    // Check if post is private
+    if (post.status === 'private') {
+      throw new ForbiddenException('This post is private');
+    }
+
+    return postResponse;
   }
 
-  // ---------------------------- Other CRUD ----------------------------
+  // ---------------------------- Other CRUD (Utils) ----------------------------
 
   private searchByTitle(title: string) {
     if (!title) return this;
@@ -515,6 +536,18 @@ export class PostService {
     this.queryOptions = {};
 
     return criteria;
+  }
+
+  private async validateAuthor(authorId: number) {
+    const isValidate = await this.prisma.user.count({
+      where: {
+        id: Number(authorId),
+      },
+    });
+
+    if (isValidate === 0) {
+      throw new BadRequestException('Author is not valid');
+    }
   }
 
   response(data: any, message: string, meta?: any) {

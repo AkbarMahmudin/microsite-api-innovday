@@ -36,6 +36,9 @@ model Post {
 
   keyPost String? @unique
 
+  author   User @relation(fields: [authorId], references: [id])
+  authorId Int
+
   @@map("posts")
 }
 
@@ -61,6 +64,8 @@ model User {
 
   role   Role @relation(fields: [roleId], references: [id])
   roleId Int
+
+  posts Post[]
 
   @@map("users")
 }

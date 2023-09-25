@@ -64,7 +64,7 @@ Response :
 }
 ```
 
-### Create Event
+### Create Post
 
 Method : `POST`
 

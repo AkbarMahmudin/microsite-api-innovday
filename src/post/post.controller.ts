@@ -11,6 +11,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -20,6 +21,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { PostService } from './post.service';
 import { CreatePostDto, UpdatePostDto } from './dto';
 import { JwtGuard } from '../auth/guard';
+import { Request } from 'express';
 
 const FILE_VALIDATION = new ParseFilePipe({
   validators: [
@@ -42,10 +44,12 @@ export class PostController {
     @Body() payload: CreatePostDto,
     @UploadedFile(FILE_VALIDATION)
     thumbnail: Express.Multer.File,
+    @Req() req: Request,
   ) {
     return await this.postService.create(
       {
         ...payload,
+        authorId: req['user']['sub'],
       },
       thumbnail,
     );
@@ -63,7 +67,7 @@ export class PostController {
     return await this.postService.getAllPublic(query);
   }
 
-  @Get('public/:idorSlug')
+  @Get(':idorSlug/public')
   async getOnePublic(
     @Param('idorSlug') idorSlug: string | number,
     @Query() query: any = {},
