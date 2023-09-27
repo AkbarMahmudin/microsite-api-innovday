@@ -86,10 +86,13 @@ export class PostService {
     }
   }
 
-  async getAll(query: any = {}) {
+  async getAll(query: any = {}, otherCondition?: any) {
     const { page = 1, limit = 10 } = query;
     const offset = (page - 1) * limit;
-    const where = { ...this.filterPost(query) };
+    const where = {
+      ...this.filterPost(query),
+      ...otherCondition,
+    };
     const select = {
       id: true,
       title: true,
@@ -165,6 +168,7 @@ export class PostService {
       include: {
         category: {
           select: {
+            id: true,
             name: true,
             slug: true,
           },
@@ -194,6 +198,7 @@ export class PostService {
       include: {
         category: {
           select: {
+            id: true,
             name: true,
             slug: true,
           },

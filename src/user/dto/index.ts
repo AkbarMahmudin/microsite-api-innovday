@@ -36,6 +36,11 @@ export class UpdateUserDto {
   @IsString()
   @IsEmail()
   email?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  roleId?: number;
 }
 
 export class UpdatePasswordDto {

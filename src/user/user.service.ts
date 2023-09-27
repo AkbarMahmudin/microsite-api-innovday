@@ -7,12 +7,16 @@ import * as bcrypt from 'bcrypt';
 
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserDto, UpdatePasswordDto, UpdateUserDto } from './dto';
+import { PostService } from 'src/post/post.service';
 
 @Injectable()
 export class UserService {
   private queryOptions = {};
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private postService: PostService,
+  ) {}
 
   async create(payload: CreateUserDto) {
     try {
@@ -197,6 +201,46 @@ export class UserService {
         { user_id: userUpdated.id },
         'Password updated successfully',
       );
+    } catch (err) {
+      if (err.code) {
+        this.prisma.prismaError(err);
+      }
+      throw err;
+    }
+  }
+
+  async getMe(id: number, query: any = {}) {
+    try {
+      const { user } = (await this.getOne(id)).data;
+      const { data, meta } = await this.postService.getAll(query, {
+        authorId: id,
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      return this.response(
+        { user, myPosts: data.posts },
+        'User retrieved successfully',
+        meta,
+      );
+    } catch (err) {
+      if (err.code) {
+        this.prisma.prismaError(err);
+      }
+      throw err;
+    }
+  }
+
+  async updateMe(id: number, payload: UpdateUserDto) {
+    try {
+      await this.prisma.user.update({
+        where: { id },
+        data: payload,
+      });
+
+      return this.response({ user_id: id }, 'User updated successfully');
     } catch (err) {
       if (err.code) {
         this.prisma.prismaError(err);

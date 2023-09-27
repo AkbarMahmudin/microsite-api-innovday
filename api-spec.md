@@ -229,6 +229,7 @@ Params :
 * published: boolean
 * category: number|string
 * tags[]: string
+* roles[speaker|host|moderator]: string
 
 Response :
 

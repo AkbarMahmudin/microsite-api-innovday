@@ -13,8 +13,12 @@ import {
 import { RoleService } from './role.service';
 import { CreateRoleDto } from './dto';
 import { JwtGuard } from 'src/auth/guard';
+import { Roles } from 'src/auth/decorator/roles.decorator';
+import { Role } from 'src/auth/interface/role.enum';
+import { RolesGuard } from 'src/auth/guard/roles.guard';
 
-@UseGuards(JwtGuard)
+@Roles(Role.ADMIN)
+@UseGuards(JwtGuard, RolesGuard)
 @Controller('roles')
 export class RoleController {
   constructor(private roleService: RoleService) {}
