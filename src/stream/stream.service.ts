@@ -451,7 +451,18 @@ export class StreamService {
               in: ids,
             },
             type: 'stream',
-            authorId,
+            OR: [
+              {
+                authorId,
+              },
+              {
+                author: {
+                  role: {
+                    name: 'admin',
+                  },
+                },
+              },
+            ],
           },
         });
 
@@ -564,6 +575,10 @@ export class StreamService {
       status: {
         notIn: this.excludeStatus,
       },
+      publishedAt: {
+        not: null,
+        lte: new Date(),
+      },
     });
   }
 
@@ -571,6 +586,10 @@ export class StreamService {
     return await this.getOne(idOrSlug, {
       status: {
         notIn: this.excludeStatus,
+      },
+      publishedAt: {
+        not: null,
+        lte: new Date(),
       },
     });
   }

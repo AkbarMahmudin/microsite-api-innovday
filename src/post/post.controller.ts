@@ -101,4 +101,12 @@ export class PostController {
 
     return await this.postService.delete(id, userId);
   }
+
+  @UseGuards(JwtGuard)
+  @Delete()
+  async deleteMany(@Body() payload: { ids: number[] }, @Req() req: Request) {
+    const userId = req['user']['sub'];
+
+    return await this.postService.deleteMany(payload.ids, userId);
+  }
 }

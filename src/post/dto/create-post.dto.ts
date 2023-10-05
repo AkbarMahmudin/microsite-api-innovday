@@ -54,4 +54,8 @@ export class CreatePostDto {
   @IsOptional()
   @Type(() => Number)
   authorId: number;
+
+  @IsString()
+  @IsOptional()
+  keyPost: string;
 }

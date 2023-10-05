@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { StorageService } from '@nhogs/nestjs-firebase';
-import { extname } from 'path';
 
 @Injectable()
 export class MediaService {
