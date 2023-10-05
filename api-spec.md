@@ -1035,3 +1035,272 @@ Response :
   "message": ""
 }
 ```
+
+
+
+
+## Stream
+
+### Get All Streams
+
+Method : `GET`
+
+Endpoint : `/streams`
+
+Auth : `Bearer`
+
+Params :
+
+* page: number
+* limit: number
+* title: string
+* status: string
+* published: boolean
+* category: number|string
+* tags[]: string
+* roles[speaker|host|moderator]: string
+
+Response :
+
+```json
+{
+  "error": false,
+  "message": "",
+  "data": {
+    "streams": [...]
+  },
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total_data": 10,
+    "total_page": 1,
+    "total_data_per_page": 10
+  }
+}
+```
+
+### Get One Stream
+
+Method : `GET`
+
+Endpoint : `/streams/:idorslug`
+
+Auth : `Bearer`
+
+Response :
+
+```json
+{
+  "error": false,
+  "message": "",
+  "data": {
+    "stream": {
+      ...
+    }
+  }
+}
+```
+
+### Create Stream
+
+Method : `POST`
+
+Endpoint : `/streams`
+
+Auth : `Bearer`
+
+Body :
+
+```typescript
+{
+  title: string
+  content: string
+  thumbnail: file
+  status: draft|published|unpublished|scheduled|archived|private
+  categoryId: number
+  publishedAt?: timestamps
+  startDate?: datetime
+  endDate?: datetime
+  youtubeId?: string
+  slidoId?: string
+  tags?: string[]
+}
+```
+
+Response :
+
+```json
+{
+  "error": false,
+  "message": "",
+  "data": {
+    "posts": {
+      ...
+    }
+  }
+}
+```
+
+### Update Stream
+
+Method : `PATCH`
+
+Endpoint : `/streams/:id`
+
+Auth : `Bearer`
+
+Body :
+
+```typescript
+{
+  title: string
+  content: string
+  thumbnail: file
+  status: draft|published|unpublished|scheduled|archived|private
+  categoryId: number
+  publishedAt?: timestamps
+  startDate?: datetime
+  endDate?: datetime
+  youtubeId?: string
+  slidoId?: string
+  tags?: string[]
+}
+```
+
+Response :
+
+```json
+{
+  "error": false,
+  "message": "",
+  "data": {
+    "stream_id": 1
+  }
+}
+```
+
+### Delete Stream
+
+Method : `DELETE`
+
+Endpoint : `/streams/:id`
+
+Auth : `Bearer`
+
+Response :
+
+```json
+{
+  "error": false,
+  "message": "",
+  "data": {
+    "stream_id": 1
+  }
+}
+```
+
+### Get All Streams (Public)
+
+Method : `GET`
+
+Endpoint : `/streams/public`
+
+Params :
+
+* page: number
+* limit: number
+* title: string
+* status: string
+* published: boolean
+* type: string
+* category: number|string
+* tags[]: string
+* keyPost: string
+
+Response :
+
+```json
+{
+  "error": false,
+  "message": "",
+  "data": {
+    "streams": [...]
+  },
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total_data": 10,
+    "total_page": 1,
+    "total_data_per_page": 10
+  }
+}
+```
+
+### Get One Stream (Public)
+
+Method : `GET`
+
+Endpoint : `/streams/:idorslug/public`
+
+Response :
+
+```json
+{
+  "error": false,
+  "message": "",
+  "data": {
+    "stream": {
+      ...
+    }
+  }
+}
+```
+
+### Get Stream Private By Keypost
+
+Method : `GET`
+
+Endpoint : `/streams/private`
+
+Params :
+
+* key: string
+
+Response :
+
+```json
+{
+  "error": false,
+  "message": "",
+  "data": {
+    "stream": {
+      ...
+    }
+  }
+}
+```
+
+### Get Stream Coming soon
+
+Method : `GET`
+
+Endpoint : `/streams/coming-soon`
+
+Response :
+
+```json
+{
+  "error": false,
+  "message": "",
+  "data": {
+    "streams": [...]
+  },
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total_data": 10,
+    "total_page": 1,
+    "total_data_per_page": 10
+  }
+}
+```

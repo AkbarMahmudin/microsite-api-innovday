@@ -1,5 +1,5 @@
 import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
-import { PostStatus } from './post-status';
+import { PostStatus, PostType } from 'src/type';
 import { Type } from 'class-transformer';
 
 export class UpdatePostDto {
@@ -29,27 +29,11 @@ export class UpdatePostDto {
   @IsOptional()
   tags?: string[];
 
-  @IsEnum(['post', 'event'], {
-    message: 'Type must be one of these values: post, event',
+  @IsEnum(['post', 'event', 'stream'], {
+    message: 'Type must be one of these values: post, event, stream',
   })
   @IsOptional()
-  type?: string;
-
-  @IsString()
-  @IsOptional()
-  startDate?: Date;
-
-  @IsString()
-  @IsOptional()
-  endDate?: Date;
-
-  @IsString()
-  @IsOptional()
-  youtubeId?: string;
-
-  @IsString()
-  @IsOptional()
-  slidoId?: string;
+  type?: PostType;
 
   @IsString()
   @IsOptional()
@@ -60,7 +44,8 @@ export class UpdatePostDto {
   @Type(() => Number)
   categoryId?: number;
 
-  @IsString()
+  @IsNumber()
   @IsOptional()
-  keyPost?: string;
+  @Type(() => Number)
+  authorId?: number;
 }

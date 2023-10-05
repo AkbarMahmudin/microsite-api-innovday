@@ -5,7 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreatePostDto, PostStatus, UpdatePostDto } from './dto';
+import { CreatePostDto, UpdatePostDto } from './dto';
+import { PostStatus } from 'src/type';
 import { MediaService } from 'src/media/media.service';
 import { extname } from 'path';
 
@@ -44,8 +45,8 @@ export class PostService {
           'post-' + Date.now().toString() + extname(thumbnail.originalname);
 
       // generate key for private post
-      if (payload.status === 'private')
-        payload.keyPost = this.generateKeyForPrivatePost();
+      // if (payload.status === 'private')
+      //   payload.keyPost = this.generateKeyForPrivatePost();
 
       const select = {
         id: true,
@@ -250,10 +251,6 @@ export class PostService {
           payload.status,
           payload.publishedAt,
         );
-
-        payload.status === 'private'
-          ? (payload.keyPost = this.generateKeyForPrivatePost())
-          : (payload.keyPost = null);
       }
 
       if (payload.tags) {

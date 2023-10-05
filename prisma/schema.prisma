@@ -39,7 +39,27 @@ model Post {
   author   User @relation(fields: [authorId], references: [id])
   authorId Int
 
+  stream Stream?
+
   @@map("posts")
+}
+
+model Stream {
+  id     Int  @id @default(autoincrement())
+  postId Int  @unique
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  startDate DateTime
+  endDate   DateTime
+  youtubeId String
+  slidoId   String
+
+  key String? @unique
+
+  // Contributors | Actors
+  users UserStream[]
+
+  @@map("streams")
 }
 
 model Category {
@@ -58,7 +78,7 @@ model User {
   id        Int      @id @default(autoincrement())
   name      String
   email     String   @unique
-  password  String
+  password  String?  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -66,6 +86,8 @@ model User {
   roleId Int
 
   posts Post[]
+
+  streams UserStream[]
 
   @@map("users")
 }
@@ -79,4 +101,13 @@ model Role {
   users User[]
 
   @@map("roles")
+}
+
+model UserStream {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  streamId Int
+  stream   Stream @relation(fields: [streamId], references: [id], onDelete: Cascade)
 }

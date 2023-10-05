@@ -11,13 +11,16 @@ const roles = [
   {
     name: 'author',
   },
+  {
+    name: 'speaker',
+  },
 ];
 
 const createUser = () => ({
   name: faker.person.fullName(),
   email: faker.internet.email(),
   password: bcrypt.hashSync(faker.internet.password(), 10),
-  roleId: 2,
+  roleId: faker.datatype.number({ min: 2, max: 3 }),
 });
 
 const main = async () => {
