@@ -25,7 +25,6 @@ export class CreateStreamDto extends CreatePostDto {
   @IsObject()
   @IsNotEmpty()
   userStreamIds: {
-    speakerId: number;
-    moderatorId: number;
+    [key: string]: string;
   };
 }

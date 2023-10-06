@@ -78,7 +78,7 @@ model User {
   id        Int      @id @default(autoincrement())
   name      String
   email     String   @unique
-  password  String?  
+  password  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -110,4 +110,8 @@ model UserStream {
 
   streamId Int
   stream   Stream @relation(fields: [streamId], references: [id], onDelete: Cascade)
+
+  role String
+
+  @@map("user_streams")
 }

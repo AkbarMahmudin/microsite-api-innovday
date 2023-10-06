@@ -57,11 +57,18 @@ export class StreamService {
         key = this.generateKeyForPrivateStream(payload.status),
       } = payload;
 
-      const { speakerId, moderatorId } = payload.userStreamIds;
+      // ADD USER STREAM CONTRIBUTORS
+      const { userStreamIds } = payload;
+      const userStreams = [];
 
-      // VALIDATE SPEAKER
-      if (!(await this.isSpeaker(speakerId))) {
-        throw new BadRequestException('Is not a speaker');
+      for (const key in userStreamIds) {
+        if (Object.prototype.hasOwnProperty.call(userStreamIds, key)) {
+          const element = userStreamIds[key];
+          userStreams.push({
+            userId: Number(element),
+            role: key,
+          });
+        }
       }
 
       // VALIDATE DATE
@@ -90,14 +97,7 @@ export class StreamService {
         key,
         users: {
           createMany: {
-            data: [
-              {
-                userId: Number(speakerId),
-              },
-              {
-                userId: Number(moderatorId),
-              },
-            ],
+            data: userStreams,
           },
         },
       };
@@ -344,25 +344,15 @@ export class StreamService {
           include: {
             users: {
               select: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    role: {
-                      select: {
-                        id: true,
-                        name: true,
-                      },
-                    },
-                  },
-                },
+                role: true,
+                userId: true,
               },
             },
           },
         });
 
         if (payload.userStreamIds) {
-          const userStreams = this.usersStreamMapped(updatedStream.users);
+          const userStreams = updatedStream.users;
           const { deletedUserStream, createdUserStream } =
             await this.updateUserStream(payload.userStreamIds, userStreams);
 
@@ -378,9 +368,10 @@ export class StreamService {
 
           createdUserStream.length &&
             (await tx.userStream.createMany({
-              data: createdUserStream.map((userId) => ({
+              data: createdUserStream.map(({ userId, role }) => ({
                 userId,
                 streamId: updatedStream.id,
+                role,
               })),
             }));
         }
@@ -505,53 +496,36 @@ export class StreamService {
     }
   }
 
-  async updateUserStream(
-    userStreamIds: {
-      speakerId: number;
-      moderatorId: number;
-    },
-    usersExist: any[],
-  ) {
+  async updateUserStream(userStreamIds: any, usersExist: any[]) {
     try {
-      const { speakerId, moderatorId } = userStreamIds;
+      const userStreams = [];
 
-      // VALIDATE SPEAKER AND MODERATOR
-      if (speakerId === moderatorId) {
-        throw new BadRequestException(
-          'Speaker and moderator cannot be the same',
-        );
+      for (const key in userStreamIds) {
+        if (Object.prototype.hasOwnProperty.call(userStreamIds, key)) {
+          const element = userStreamIds[key];
+          userStreams.push({
+            userId: Number(element),
+            role: key,
+          });
+        }
       }
 
-      if (!(await this.isSpeaker(speakerId))) {
-        throw new BadRequestException('Is not a speaker');
-      }
-
-      if (await this.isSpeaker(moderatorId)) {
-        throw new BadRequestException('Moderator cannot be a speaker');
-      }
-
-      const [isNotSpeaker] = usersExist.filter(
-        ({ id, role }) =>
-          role === 'speaker' && Number(id) !== Number(speakerId),
-      );
-      const [isNotModerator] = usersExist.filter(
-        ({ id, role }) =>
-          role !== 'speaker' &&
-          role !== 'admin' &&
-          Number(id) !== Number(moderatorId),
-      );
+      const speaker = userStreams.find(({ role }) => role === 'speaker');
+      const otherSpeakers = userStreams.filter(
+        ({ role }) => role !== 'speaker',
+      )[0];
 
       return {
-        deletedUserStream: [
-          (isNotSpeaker && isNotSpeaker.id) || null,
-          (isNotModerator && isNotModerator.id) || null,
-        ].filter((v) => v !== null),
-        createdUserStream: [
-          (isNotSpeaker !== Number(speakerId) && Number(speakerId)) || null,
-          (isNotModerator !== Number(moderatorId) && Number(moderatorId)) ||
-            null,
-        ].filter(
-          (v) => v !== null && !usersExist.map(({ id }) => id).includes(v),
+        deletedUserStream: usersExist
+          .filter(
+            ({ userId, role }) =>
+              (userId !== speaker.userId && role === 'speaker') ||
+              (userId !== otherSpeakers.userId && role !== 'speaker'),
+          )
+          .map(({ userId }) => userId),
+        createdUserStream: userStreams.filter(
+          ({ userId }) =>
+            !usersExist.map(({ userId: id }) => id).includes(userId),
         ),
       };
     } catch (err) {

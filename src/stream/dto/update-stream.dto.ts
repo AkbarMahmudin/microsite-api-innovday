@@ -25,7 +25,6 @@ export class UpdateStreamDto extends UpdatePostDto {
   @IsObject()
   @IsOptional()
   userStreamIds?: {
-    speakerId: number;
-    moderatorId: number;
+    [key: string]: string;
   };
 }
