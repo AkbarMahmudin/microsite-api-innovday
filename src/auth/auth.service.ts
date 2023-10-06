@@ -14,12 +14,12 @@ export class AuthService {
   ) {}
 
   async validateUser(payload: AuthDto) {
-    const { email, password } = payload;
+    const { email, password = null } = payload;
     const user = await this.prisma.user.findUnique({
       include: {
         role: true,
       },
-      where: { email },
+      where: { email, password: { not: null } },
     });
 
     if (!user) throw new ForbiddenException('Invalid credentials');

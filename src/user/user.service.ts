@@ -20,8 +20,25 @@ export class UserService {
 
   async create(payload: CreateUserDto) {
     try {
-      const salt = await bcrypt.genSalt(10);
-      payload.password = await bcrypt.hash(payload.password, salt);
+      payload.roleId = Number(payload.roleId);
+
+      if (payload.password) {
+        const salt = await bcrypt.genSalt(10);
+        payload.password = await bcrypt.hash(payload.password, salt);
+      } else {
+        delete payload.roleId;
+        payload['role'] = {
+          connectOrCreate: {
+            where: {
+              name: 'user',
+            },
+            create: {
+              name: 'user',
+            },
+          },
+        };
+      }
+
       const userCreated = await this.prisma.user.create({
         select: {
           id: true,
