@@ -7,6 +7,7 @@ async function bootstrap() {
     bodyParser: true,
   });
   app.useGlobalPipes(new ValidationPipe()); // 👈 validation pipe
+  app.enableCors(); // 👈 enable cors
   await app.listen(3000);
 }
 bootstrap();

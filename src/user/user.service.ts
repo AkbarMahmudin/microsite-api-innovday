@@ -94,8 +94,9 @@ export class UserService {
         where: {
           ...this.queryOptions,
         },
-        skip: offset,
-        take: limit,
+        skip: Number(offset),
+        take: Number(limit),
+        ...this.sortBy(query.sort),
       }),
       this.prisma.user.count({
         where: {
@@ -151,6 +152,11 @@ export class UserService {
 
   async update(id: number, payload: UpdateUserDto) {
     try {
+      if (payload.password) {
+        const salt = await bcrypt.genSalt(10);
+        payload.password = await bcrypt.hash(payload.password, salt);
+      }
+
       const userUpdated = await this.prisma.user.update({
         select: {
           id: true,
@@ -278,6 +284,21 @@ export class UserService {
     };
 
     return this;
+  }
+
+  private sortBy(
+    queryOrder: { [key: string]: string } = {
+      createdAt: 'desc',
+    },
+  ) {
+    const field = Object.keys(queryOrder)[0] || 'createdAt';
+    const sort = queryOrder[field].toLowerCase() || 'desc';
+
+    return {
+      orderBy: {
+        [field]: sort,
+      },
+    };
   }
 
   private response(data: any, message: string, meta?: any) {
