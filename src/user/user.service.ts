@@ -74,7 +74,7 @@ export class UserService {
     const { name, email, page = 1, limit = 10 } = query;
     const offset = (page - 1) * limit;
 
-    this.searchByNameOrEmail(name, email);
+    this.searchByNameOrEmail(name, email).searchByRole(query.roleIds);
 
     const [users, count] = await this.prisma.$transaction([
       this.prisma.user.findMany({
@@ -208,16 +208,15 @@ export class UserService {
         throw new NotFoundException('User not found');
       }
 
-      if (!bcrypt.compareSync(payload.currentPassword, user.password)) {
+      if (!(await bcrypt.compare(payload.currentPassword, user.password))) {
         throw new BadRequestException('Current password is incorrect');
       }
 
       const salt = await bcrypt.genSalt(10);
-      payload.newPassword = await bcrypt.hash(payload.newPassword, salt);
 
       const userUpdated = await this.prisma.user.update({
         where: { id },
-        data: { password: payload.newPassword },
+        data: { password: await bcrypt.hash(payload.newPassword, salt) },
       });
 
       return this.response(
@@ -299,6 +298,21 @@ export class UserService {
         [field]: sort,
       },
     };
+  }
+
+  private searchByRole(roleIds: number[]) {
+    if (!roleIds) return this;
+
+    this.queryOptions = {
+      ...this.queryOptions,
+      role: {
+        id: {
+          in: roleIds.map((roleId) => Number(roleId)),
+        },
+      },
+    };
+
+    return this;
   }
 
   private response(data: any, message: string, meta?: any) {

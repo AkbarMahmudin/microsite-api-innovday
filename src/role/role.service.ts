@@ -9,6 +9,8 @@ export class RoleService {
 
   async create(payload: CreateRoleDto) {
     try {
+      payload.name = payload.name.toLowerCase();
+
       const roleCreated = await this.prisma.role.create({
         data: payload,
       });
@@ -29,13 +31,18 @@ export class RoleService {
       const offset = (page - 1) * limit;
       this.searchByName(name);
 
+      const skipTake =
+        limit === '*'
+          ? undefined
+          : { skip: Number(offset), take: Number(limit) };
+
       const [roles, count] = await this.prisma.$transaction([
         this.prisma.role.findMany({
-          skip: Number(offset),
-          take: Number(limit),
+          ...skipTake,
           where: {
             ...this.queryOptions,
           },
+          ...this.sortBy(query.sort),
         }),
         this.prisma.role.count({
           where: {
@@ -53,6 +60,8 @@ export class RoleService {
         })),
         total_data_per_page: roles.length,
       };
+
+      this.queryOptions = {};
 
       return this.response({ roles }, 'Roles retrieved successfully', meta);
     } catch (err) {
@@ -133,6 +142,21 @@ export class RoleService {
       name: {
         contains: name,
         mode: 'insensitive',
+      },
+    };
+  }
+
+  private sortBy(
+    queryOrder: { [key: string]: string } = {
+      createdAt: 'desc',
+    },
+  ) {
+    const field = Object.keys(queryOrder)[0] || 'createdAt';
+    const sort = queryOrder[field].toLowerCase() || 'desc';
+
+    return {
+      orderBy: {
+        [field]: sort,
       },
     };
   }
