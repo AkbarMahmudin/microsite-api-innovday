@@ -8,6 +8,8 @@ import { CategoryDto } from './dto';
 
 @Injectable()
 export class CategoryService {
+  private queryOptions = {};
+
   constructor(private prisma: PrismaService) {}
 
   async create(payload: CategoryDto) {
@@ -56,31 +58,27 @@ export class CategoryService {
   async getAll(query: any = {}) {
     const { name, page = 1, limit = 10 } = query;
     const offset = (page - 1) * limit;
-    const options: any = {
-      take: Number(limit),
-      skip: Number(offset),
-      orderBy: {
-        name: 'desc',
-      },
-    };
 
-    if (name) {
-      options.where = {
-        name: {
-          contains: name,
-          mode: 'insensitive',
-        },
-      };
-    }
+    const skipTake =
+      limit === '*' ? undefined : { skip: Number(offset), take: Number(limit) };
+
+    this.searchByName(name);
 
     const [categories, count] = await this.prisma.$transaction([
-      this.prisma.category.findMany(options),
+      this.prisma.category.findMany({
+        ...skipTake,
+        where: {
+          ...this.queryOptions,
+        },
+        ...this.sortBy(query.sort),
+      }),
       this.prisma.category.count({
         where: {
-          ...options.where,
+          ...this.queryOptions,
         },
       }),
     ]);
+
     const meta = {
       ...(await this.prisma.paginate({
         count,
@@ -89,6 +87,8 @@ export class CategoryService {
       })),
       total_data_per_page: categories.length,
     };
+
+    this.queryOptions = {};
 
     return this.response(
       { categories },
@@ -198,6 +198,34 @@ export class CategoryService {
       }
       throw err;
     }
+  }
+
+  // UTILS
+  private searchByName(name: string) {
+    if (!name) return this;
+
+    this.queryOptions = {
+      ...this.queryOptions,
+      name: {
+        contains: name,
+        mode: 'insensitive',
+      },
+    };
+  }
+
+  private sortBy(
+    queryOrder: { [key: string]: string } = {
+      createdAt: 'desc',
+    },
+  ) {
+    const field = Object.keys(queryOrder)[0] || 'createdAt';
+    const sort = queryOrder[field].toLowerCase() || 'desc';
+
+    return {
+      orderBy: {
+        [field]: sort,
+      },
+    };
   }
 
   private response(data: any, message: string, meta?: any) {
