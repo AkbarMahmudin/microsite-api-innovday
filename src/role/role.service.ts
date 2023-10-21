@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateRoleDto } from './dto';
 
@@ -124,6 +128,25 @@ export class RoleService {
         { role_id: roleDeleted.id },
         'Role deleted successfully',
       );
+    } catch (err) {
+      if (err.code) {
+        this.prisma.prismaError(err);
+      }
+      throw err;
+    }
+  }
+
+  async deleteMany(ids: number[]) {
+    try {
+      if (!ids || !ids.length) {
+        throw new BadRequestException('Please provide at least one id');
+      }
+
+      await this.prisma.role.deleteMany({
+        where: { id: { in: ids } },
+      });
+
+      return this.response({ role_ids: ids }, 'Roles deleted successfully');
     } catch (err) {
       if (err.code) {
         this.prisma.prismaError(err);

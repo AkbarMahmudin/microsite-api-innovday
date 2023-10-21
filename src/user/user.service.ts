@@ -198,6 +198,33 @@ export class UserService {
     }
   }
 
+  async deleteMany(ids: number[]) {
+    try {
+      console.log(ids);
+      if (!ids || ids.length === 0) {
+        throw new BadRequestException('Please provide at least one id');
+      }
+
+      await this.prisma.user.deleteMany({
+        where: { id: { in: ids } },
+      });
+
+      return this.response(
+        {
+          user_ids: ids,
+        },
+        'Users deleted successfully',
+      );
+    } catch (err) {
+      if (err.code) {
+        this.prisma.prismaError(err);
+      }
+      throw err;
+    }
+  }
+
+  // ---------------------- User Profile - Setting ----------------------
+
   async updatePassword(id: number, payload: UpdatePasswordDto) {
     try {
       const user = await this.prisma.user.findUnique({
@@ -271,7 +298,7 @@ export class UserService {
     }
   }
 
-  // ---------------------- Other CRUD ----------------------
+  // ---------------------- Other CRUD (UTILS) ----------------------
 
   private searchByNameOrEmail(name, email) {
     if (!name && !email) return this;

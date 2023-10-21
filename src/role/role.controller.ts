@@ -50,4 +50,9 @@ export class RoleController {
   async delete(@Param('id', ParseIntPipe) id: number) {
     return this.roleService.delete(id);
   }
+
+  @Delete()
+  async deleteMany(@Body('ids') ids: number[]) {
+    return this.roleService.deleteMany(ids);
+  }
 }

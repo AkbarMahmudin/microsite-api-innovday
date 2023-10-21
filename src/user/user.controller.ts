@@ -78,4 +78,10 @@ export class UserController {
   async delete(@Param('id', ParseIntPipe) id: number) {
     return await this.userService.delete(id);
   }
+
+  @Roles(Role.ADMIN)
+  @Delete()
+  async deleteMany(@Body('ids') ids: number[]) {
+    return await this.userService.deleteMany(ids);
+  }
 }
