@@ -18,6 +18,7 @@ export class PostService {
     id: true,
     title: true,
     slug: true,
+    description: true,
     thumbnail: true,
     status: true,
     tags: true,
@@ -36,6 +37,10 @@ export class PostService {
       },
     },
     publishedAt: true,
+    // Metadata for SEO
+    metaTitle: true,
+    metaDescription: true,
+    metaKeywords: true,
   };
 
   constructor(
@@ -63,13 +68,12 @@ export class PostService {
       payload.categoryId = Number(payload.categoryId);
       payload.tags && this.validationTags(payload.tags);
 
-      // Set key for private post
-      payload.status &&
-        (payload.keyPost = this.generateKeyForPrivatePost(payload.status));
-
       // create filename for thumbnail
       if (thumbnail)
         payload.thumbnail = this.generateFileName(thumbnail, 'post-thumbnail');
+
+      // set metadata for SEO
+      this.setMetadata(payload);
 
       const postCreated = await this.prisma.post.create({
         select: this.defaultSelectedFields,
@@ -110,6 +114,21 @@ export class PostService {
       type: 'post',
     };
 
+    const aggregate = await this.prisma.post.groupBy({
+      by: ['status'],
+      _count: {
+        status: true,
+      },
+      where: {
+        type: 'post',
+      },
+    });
+
+    const aggregateStatus = aggregate.reduce((acc, cur) => {
+      acc[cur.status] = cur._count.status;
+      return acc;
+    }, {});
+
     // data
     const [posts, count] = await this.prisma.$transaction([
       this.prisma.post.findMany({
@@ -117,9 +136,7 @@ export class PostService {
         skip: Number(offset),
         select: this.defaultSelectedFields,
         where,
-        orderBy: {
-          publishedAt: 'desc',
-        },
+        ...this.sortBy(query.sort),
       }),
       this.prisma.post.count({ where }),
     ]);
@@ -146,6 +163,7 @@ export class PostService {
     return this.response(
       {
         posts: postsWithThumbnail,
+        status: aggregateStatus,
       },
       'Posts retrieved successfully',
       meta,
@@ -158,7 +176,10 @@ export class PostService {
       : { id: Number(idOrSlug) };
 
     const post = await this.prisma.post.findUnique({
-      select: this.defaultSelectedFields,
+      include: {
+        category: true,
+        author: true,
+      },
       where: {
         ...condition,
         ...otherCondition,
@@ -185,6 +206,8 @@ export class PostService {
     const slug = payload.title
       ? payload.title.toLowerCase().replace(/ /g, '-')
       : '';
+
+    this.setMetadata(payload);
 
     try {
       const {
@@ -335,12 +358,11 @@ export class PostService {
   private excludeStatus = [
     PostStatus.ARCHIVED,
     PostStatus.DRAFT,
-    PostStatus.UNPUBLISHED,
     PostStatus.PRIVATE,
   ];
 
   async getAllPublic(query: any = {}) {
-    return await this.getAll(query, {
+    const posts = await this.getAll(query, {
       status: {
         notIn: this.excludeStatus,
       },
@@ -349,6 +371,10 @@ export class PostService {
         lte: new Date(),
       },
     });
+
+    delete posts.data.status;
+
+    return posts;
   }
 
   async getOnePublic(idOrSlug: number | string) {
@@ -381,10 +407,16 @@ export class PostService {
     return `${prefixName}${randomName}${extname(file.originalname)}`;
   }
 
-  private generateKeyForPrivatePost(status: string) {
-    if (status !== 'private') return null;
+  private setMetadata(payload: CreatePostDto | UpdatePostDto) {
+    const { title, description, tags } = payload;
 
-    return Math.random().toString(36).slice(-8);
+    if (!title || !description) return;
+
+    payload.metaTitle = title;
+    payload.metaDescription = description;
+    payload.metaKeywords = tags
+      ? tags.map((tag) => tag.toLowerCase()).join(', ')
+      : '';
   }
 
   // * ---------------------------- FILTER ----------------------------
@@ -508,6 +540,21 @@ export class PostService {
     return criteria;
   }
 
+  private sortBy(
+    queryOrder: { [key: string]: string } = {
+      createdAt: 'desc',
+    },
+  ) {
+    const field = Object.keys(queryOrder)[0] || 'createdAt';
+    const sort = queryOrder[field].toLowerCase() || 'desc';
+
+    return {
+      orderBy: {
+        [field]: sort,
+      },
+    };
+  }
+
   // * ---------------------------- VALIDATION ----------------------------
 
   private async validateAuthor(userId: number, authorId?: any) {
@@ -540,6 +587,14 @@ export class PostService {
   private validationTags(tags: string[]) {
     if (tags.filter((tag) => !tag).length > 0) {
       throw new BadRequestException('Tags cannot be empty');
+    }
+  }
+
+  private validatePublishedAt(publishedAt: Date) {
+    const currentDate = new Date();
+
+    if (publishedAt < currentDate) {
+      throw new BadRequestException('Published date cannot be less than today');
     }
   }
 

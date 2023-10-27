@@ -11,30 +11,31 @@ datasource db {
 }
 
 model Post {
-  id        Int      @id @default(autoincrement())
-  thumbnail String?
-  title     String
-  slug      String   @unique
-  content   String?
-  status    String   @default("draft")
-  tags      String[] @default([])
+  id          Int      @id @default(autoincrement())
+  thumbnail   String?
+  title       String
+  slug        String   @unique
+  description String?  @db.Text
+  content     String?
+  status      String   @default("draft")
+  tags        String[] @default([])
 
   type String @default("post")
 
-  // If Event (Live Stream)
-  startDate DateTime?
-  endDate   DateTime?
-  youtubeId String?
-  slidoId   String?
+  // SEO Meta
+  metaTitle       String?
+  metaDescription String?
+  metaKeywords    String?
+  
 
+  // Timestamps
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  // Relationships
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   categoryId Int?
-
-  keyPost String? @unique
 
   author   User @relation(fields: [authorId], references: [id])
   authorId Int

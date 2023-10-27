@@ -17,6 +17,7 @@ export class StreamService {
     id: true,
     title: true,
     slug: true,
+    description: true,
     thumbnail: true,
     status: true,
     category: {
@@ -38,9 +39,12 @@ export class StreamService {
         slidoId: true,
         startDate: true,
         endDate: true,
+        key: true,
       },
     },
     publishedAt: true,
+    createdAt: true,
+    updatedAt: true,
   };
 
   private queryOptions = {};
@@ -79,6 +83,7 @@ export class StreamService {
       const post: PostItem = {
         title: payload.title,
         slug: payload.title.toLowerCase().replace(/ /g, '-'),
+        description: payload.description,
         content: payload.content,
         thumbnail: filename,
         status: payload.status || PostStatus.DRAFT,
@@ -87,6 +92,8 @@ export class StreamService {
         publishedAt: this.setPublishedAt(payload.status, payload.publishedAt),
         categoryId: Number(payload.categoryId),
         authorId: payload.authorId,
+        // Metadata for SEO
+        ...this.setMetadata(payload),
       };
 
       const stream = {
@@ -144,23 +151,41 @@ export class StreamService {
         type: 'stream',
       };
 
-      const [streams, count] = await this.prisma.$transaction([
-        this.prisma.post.findMany({
-          take: Number(limit),
-          skip: Number(offset),
-          select: this.defaultSelectedFields,
-          where,
-          orderBy: {
-            publishedAt: 'desc',
-          },
-        }),
-        this.prisma.post.count({ where }),
-      ]);
+      const [streams, countFiltered, countAll] = await this.prisma.$transaction(
+        [
+          this.prisma.post.findMany({
+            take: Number(limit),
+            skip: Number(offset),
+            select: this.defaultSelectedFields,
+            where,
+            ...this.sortBy(query.sort),
+          }),
+          this.prisma.post.count({ where }),
+          this.prisma.post.count({ where: { type: 'stream' } }),
+        ],
+      );
+
+      const aggregate = await this.prisma.post.groupBy({
+        by: ['status'],
+        _count: {
+          status: true,
+        },
+        where: {
+          type: 'stream',
+        },
+      });
+
+      const aggregateStatus = aggregate.reduce((acc, curr) => {
+        acc[curr.status] = curr._count.status;
+        return acc;
+      }, {});
+
+      aggregateStatus['all'] = countAll;
 
       // * METADATA
       const meta = {
         ...(await this.prisma.paginate({
-          count,
+          count: countFiltered,
           page,
           limit,
         })),
@@ -189,7 +214,7 @@ export class StreamService {
       );
 
       return this.response(
-        { streams: streamsWithThumbnail },
+        { streams: streamsWithThumbnail, status: aggregateStatus },
         'Get all streams successfully',
         meta,
       );
@@ -217,6 +242,7 @@ export class StreamService {
             key: true,
             users: {
               select: {
+                role: true,
                 user: {
                   select: {
                     id: true,
@@ -541,7 +567,6 @@ export class StreamService {
     PostStatus.DRAFT,
     PostStatus.ARCHIVED,
     PostStatus.PRIVATE,
-    PostStatus.UNPUBLISHED,
   ];
 
   async getAllPublic(query: any = {}) {
@@ -655,7 +680,8 @@ export class StreamService {
 
       const lives = streams.filter(
         (stream) =>
-          stream.startDate <= new Date() && stream.endDate >= new Date(),
+          stream.startDate <= new Date().toISOString() &&
+          stream.endDate >= new Date().toISOString(),
       );
 
       return this.response({ streams: lives }, 'Get live streams successfully');
@@ -810,10 +836,10 @@ export class StreamService {
   }
 
   private usersStreamMapped(users: any[]) {
-    return users.map(({ user }) => ({
+    return users.map(({ role, user }) => ({
       id: user.id,
       name: user.name,
-      role: user.role.name,
+      role,
     }));
   }
 
@@ -840,6 +866,20 @@ export class StreamService {
     }
 
     return true;
+  }
+
+  private setMetadata(payload: CreateStreamDto | UpdateStreamDto) {
+    if (!payload.title || !payload.description) return;
+
+    return {
+      metaTitle: payload.title,
+      metaDescription: payload.description,
+      metaKeywords: payload.tags
+        ? ([...new Set(payload.tags.map((tag) => tag.toLowerCase()))].join(
+            ', ',
+          ) as string)
+        : '',
+    };
   }
 
   private validationTags(tags: string[]) {
@@ -968,6 +1008,21 @@ export class StreamService {
     this.queryOptions = {};
 
     return criteria;
+  }
+
+  private sortBy(
+    queryOrder: { [key: string]: string } = {
+      createdAt: 'desc',
+    },
+  ) {
+    const field = Object.keys(queryOrder)[0] || 'createdAt';
+    const sort = queryOrder[field].toLowerCase() || 'desc';
+
+    return {
+      orderBy: {
+        [field]: sort,
+      },
+    };
   }
   // * ------------------ END FILTER ------------------
 

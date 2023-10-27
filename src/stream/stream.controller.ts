@@ -25,7 +25,7 @@ import { UpdateStreamDto } from './dto/update-stream.dto';
 
 const FILE_VALIDATION = new ParseFilePipe({
   validators: [
-    new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 2 }), // 2MB
+    new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 3 }), // 3MB
     new FileTypeValidator({
       fileType: /image\/(jpe?g|png|webp)$/i,
     }),

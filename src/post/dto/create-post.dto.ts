@@ -19,15 +19,16 @@ export class CreatePostDto {
 
   @IsString()
   @IsNotEmpty()
+  description: string;
+
+  @IsString()
+  @IsNotEmpty()
   content: string;
 
-  @IsEnum(
-    ['draft', 'published', 'unpublished', 'scheduled', 'private', 'archived'],
-    {
-      message:
-        'Status must be one of these values: draft, published, unpublished, scheduled, private, archived',
-    },
-  )
+  @IsEnum(['draft', 'published', 'scheduled', 'private', 'archived'], {
+    message:
+      'Status must be one of these values: draft, published, scheduled, private, archived',
+  })
   @IsOptional()
   status?: PostStatus;
 
@@ -55,7 +56,16 @@ export class CreatePostDto {
   @Type(() => Number)
   authorId: number;
 
+  // Metadata for SEO
   @IsString()
   @IsOptional()
-  keyPost: string;
+  metaTitle?: string;
+
+  @IsString()
+  @IsOptional()
+  metaDescription?: string;
+
+  @IsString()
+  @IsOptional()
+  metaKeywords?: string;
 }
