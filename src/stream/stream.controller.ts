@@ -22,6 +22,8 @@ import { JwtGuard } from 'src/auth/guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express';
 import { UpdateStreamDto } from './dto/update-stream.dto';
+import { Role } from 'src/auth/interface/role.enum';
+import { Roles } from 'src/auth/decorator/roles.decorator';
 
 const FILE_VALIDATION = new ParseFilePipe({
   validators: [
@@ -83,6 +85,7 @@ export class StreamController {
    * ----------------------------
    */
 
+  @Roles(Role.ADMIN, Role.AUTHOR)
   @UseGuards(JwtGuard)
   @Post()
   @UseInterceptors(FileInterceptor('thumbnail'))
@@ -109,6 +112,7 @@ export class StreamController {
     return await this.streamService.getOne(id);
   }
 
+  @Roles(Role.ADMIN, Role.AUTHOR)
   @UseGuards(JwtGuard)
   @Patch(':id')
   @UseInterceptors(FileInterceptor('thumbnail'))
@@ -124,6 +128,7 @@ export class StreamController {
     return await this.streamService.update(id, payload, thumbnail);
   }
 
+  @Roles(Role.ADMIN, Role.AUTHOR)
   @UseGuards(JwtGuard)
   @Delete(':id')
   async delete(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
@@ -131,6 +136,7 @@ export class StreamController {
     return await this.streamService.delete(id, authorId);
   }
 
+  @Roles(Role.ADMIN, Role.AUTHOR)
   @UseGuards(JwtGuard)
   @Delete()
   async deleteMany(@Body() payload: { ids: number[] }, @Req() req: Request) {

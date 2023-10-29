@@ -21,7 +21,7 @@ import { RolesGuard } from 'src/auth/guard/roles.guard';
 export class CategoryController {
   constructor(private categoryService: CategoryService) {}
 
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.AUTHOR)
   @UseGuards(JwtGuard, RolesGuard)
   @Post()
   async create(@Body() payload: CategoryDto) {
@@ -38,7 +38,7 @@ export class CategoryController {
     return this.categoryService.getOne(idorslug);
   }
 
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.AUTHOR)
   @UseGuards(JwtGuard, RolesGuard)
   @Patch(':id')
   async update(

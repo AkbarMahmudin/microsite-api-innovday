@@ -338,7 +338,6 @@ export class StreamService {
           tags: this.validationTags([...postExist.tags, ...payload.tags]),
         }),
         ...(payload.categoryId && { categoryId: Number(payload.categoryId) }),
-        ...(payload.authorId && { authorId: Number(payload.authorId) }),
         ...(thumbnail && {
           thumbnail: this.generateFileName(thumbnail, 'stream-thumbnail'),
         }),

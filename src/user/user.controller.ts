@@ -52,13 +52,13 @@ export class UserController {
     return await this.userService.create(payload);
   }
 
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.AUTHOR)
   @Get()
   async getAll(@Query() query: any) {
     return await this.userService.getAll(query);
   }
 
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.AUTHOR)
   @Get(':id')
   async getOne(@Param('id', ParseIntPipe) id: number) {
     return await this.userService.getOne(id);

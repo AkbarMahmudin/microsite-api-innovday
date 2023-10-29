@@ -28,6 +28,7 @@ export class RoleController {
     return this.roleService.create(payload);
   }
 
+  @Roles(Role.ADMIN, Role.AUTHOR)
   @Get()
   async getAll(@Query() query: any) {
     return this.roleService.getAll(query);
