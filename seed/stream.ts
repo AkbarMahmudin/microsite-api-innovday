@@ -30,7 +30,8 @@ const stream = {
 const createStream = () => ({
   title: faker.lorem.sentence(),
   description: faker.lorem.paragraphs(3),
-  thumbnail: 'stream-thumbnail-8531ba2f9fcd2bc73c9a70da101a6572e.png',
+  thumbnail:
+    'https://drive.google.com/uc?export=view&id=1jqU5AL1hmCkW20jITpHpazFyEaN1DB2Y',
   status: faker.helpers.arrayElement([
     'draft',
     'published',

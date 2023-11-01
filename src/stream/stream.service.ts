@@ -78,7 +78,13 @@ export class StreamService {
       // VALIDATE DATE
       this.isDateValid(payload);
 
-      const filename = this.generateFileName(thumbnail, 'stream-thumbnail');
+      // UPLOAD THUMBNAIL TO STORAGE
+      let filename = this.generateFileName(thumbnail, 'stream-thumbnail');
+
+      if (thumbnail) {
+        await this.media.uploadFile(thumbnail, filename);
+        filename = await this.media.getFileDownloadUrl(filename);
+      }
 
       const post: PostItem = {
         title: payload.title,
@@ -121,11 +127,7 @@ export class StreamService {
         },
       });
 
-      if (thumbnail && streamCreated) {
-        await this.media.uploadFile(thumbnail, filename);
-      }
-
-      streamCreated.thumbnail = await this.media.getFileDownloadUrl(filename);
+      !streamCreated && thumbnail && (await this.media.deleteFile(filename));
 
       const responseData = {
         post_id: streamCreated.id,
@@ -195,11 +197,6 @@ export class StreamService {
       // * STREAMS WITH THUMBNAIL
       const streamsWithThumbnail = await Promise.all(
         streams.map(async (stream) => {
-          if (stream.thumbnail) {
-            stream.thumbnail = await this.media.getFileDownloadUrl(
-              stream.thumbnail,
-            );
-          }
           stream['streamId'] = stream.stream.id;
           delete stream.stream.id;
 
@@ -278,12 +275,6 @@ export class StreamService {
         throw new NotFoundException('Stream is not found');
       }
 
-      if (postStream.thumbnail) {
-        postStream.thumbnail = await this.media.getFileDownloadUrl(
-          postStream.thumbnail,
-        );
-      }
-
       postStream['streamId'] = postStream.stream.id;
       delete postStream.stream.id;
 
@@ -321,6 +312,13 @@ export class StreamService {
       // VALIDATE DATE
       this.isDateValid(payload, postExist);
 
+      // UPLOAD THUMBNAIL TO STORAGE
+      let filename = this.generateFileName(thumbnail, 'stream-thumbnail');
+      if (thumbnail) {
+        await this.media.uploadFile(thumbnail, filename);
+        filename = await this.media.getFileDownloadUrl(filename);
+      }
+
       const post = {
         ...(payload.title && {
           title: payload.title,
@@ -339,7 +337,7 @@ export class StreamService {
         }),
         ...(payload.categoryId && { categoryId: Number(payload.categoryId) }),
         ...(thumbnail && {
-          thumbnail: this.generateFileName(thumbnail, 'stream-thumbnail'),
+          thumbnail: filename,
         }),
       };
 
@@ -409,7 +407,6 @@ export class StreamService {
 
       if (result && thumbnail) {
         await this.media.deleteFile(postExist.thumbnail);
-        await this.media.uploadFile(thumbnail, post.thumbnail);
       }
 
       const responseData = {
@@ -840,31 +837,6 @@ export class StreamService {
       name: user.name,
       role,
     }));
-  }
-
-  private async isSpeaker(userId: number) {
-    const user = await this.prisma.user.findUnique({
-      select: {
-        role: {
-          select: {
-            name: true,
-          },
-        },
-      },
-      where: {
-        id: Number(userId),
-      },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User is not found');
-    }
-
-    if (user.role.name !== 'speaker') {
-      return false;
-    }
-
-    return true;
   }
 
   private setMetadata(payload: CreateStreamDto | UpdateStreamDto) {

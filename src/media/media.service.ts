@@ -33,11 +33,13 @@ export class MediaService {
   }
 
   async deleteFile(filename: string) {
-    if (!filename) {
-      return;
-    }
+    try {
+      if (!filename) {
+        return;
+      }
 
-    const url = await this.storageService.deleteObject(filename);
-    return url;
+      const url = await this.storageService.deleteObject(filename);
+      return url;
+    } catch (err) {}
   }
 }
